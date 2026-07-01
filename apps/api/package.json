@@ -6,14 +6,16 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --name init",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^5.18.0",
-    "@thc/shared": "workspace:*",
+    "@thc/shared": "*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
