@@ -1,0 +1,247 @@
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+const moves = [
+  {
+    slug: "basic-strike",
+    name: "Basic Strike",
+    type: "HYBRID",
+    kind: "DAMAGE" as const,
+    basePower: 18,
+    accuracy: 100,
+    meterGain: 8,
+    timingPattern: [500],
+    goodBonusCap: 0.12,
+    perfectBonusCap: 0.25
+  },
+  {
+    slug: "mango-rush",
+    name: "Mango Rush",
+    type: "FRUIT",
+    kind: "DAMAGE" as const,
+    basePower: 28,
+    accuracy: 95,
+    meterGain: 12,
+    timingPattern: [400, 750, 1100],
+    goodBonusCap: 0.15,
+    perfectBonusCap: 0.35
+  },
+  {
+    slug: "resin-guard",
+    name: "Resin Guard",
+    type: "HYBRID",
+    kind: "SHIELD" as const,
+    basePower: 0,
+    accuracy: 100,
+    meterGain: 12,
+    timingPattern: [600],
+    goodBonusCap: 0.15,
+    perfectBonusCap: 0.35,
+    statusEffect: "SHIELD"
+  },
+  {
+    slug: "diesel-flash",
+    name: "Diesel Flash",
+    type: "GAS",
+    kind: "DAMAGE" as const,
+    basePower: 34,
+    accuracy: 88,
+    meterGain: 14,
+    timingPattern: [300, 620, 940],
+    goodBonusCap: 0.18,
+    perfectBonusCap: 0.4
+  },
+  {
+    slug: "purple-lock",
+    name: "Purple Lock",
+    type: "PURPLE",
+    kind: "DEBUFF" as const,
+    basePower: 16,
+    accuracy: 92,
+    meterGain: 13,
+    timingPattern: [500, 950],
+    goodBonusCap: 0.12,
+    perfectBonusCap: 0.3,
+    statusEffect: "DROWSY"
+  },
+  {
+    slug: "skunk-swipe",
+    name: "Skunk Swipe",
+    type: "GAS",
+    kind: "DAMAGE" as const,
+    basePower: 20,
+    accuracy: 94,
+    meterGain: 9,
+    timingPattern: [500, 900],
+    goodBonusCap: 0.12,
+    perfectBonusCap: 0.28
+  },
+  {
+    slug: "kush-crush",
+    name: "Kush Crush",
+    type: "INDICA",
+    kind: "DAMAGE" as const,
+    basePower: 30,
+    accuracy: 90,
+    meterGain: 11,
+    timingPattern: [450, 850],
+    goodBonusCap: 0.15,
+    perfectBonusCap: 0.32
+  }
+];
+
+const companions = [
+  {
+    slug: "blue-mango",
+    name: "Blue Mango",
+    primaryType: "HYBRID",
+    secondaryType: "FRUIT",
+    role: "Balanced attacker-support",
+    baseHp: 112,
+    potency: 21,
+    vigor: 18,
+    speed: 17,
+    resin: 18,
+    terpenes: 23,
+    stability: 19,
+    awakeningName: "Keeper Pheno",
+    starter: true,
+    moveSlugs: ["basic-strike", "mango-rush", "resin-guard"]
+  },
+  {
+    slug: "sour-diesel",
+    name: "Sour Diesel",
+    primaryType: "SATIVA",
+    secondaryType: "GAS",
+    role: "Fast striker",
+    baseHp: 96,
+    potency: 25,
+    vigor: 14,
+    speed: 26,
+    resin: 15,
+    terpenes: 19,
+    stability: 15,
+    awakeningName: "Turbo Pheno",
+    starter: true,
+    moveSlugs: ["basic-strike", "diesel-flash"]
+  },
+  {
+    slug: "granddaddy-purple",
+    name: "Granddaddy Purple",
+    primaryType: "INDICA",
+    secondaryType: "PURPLE",
+    role: "Tank / debuffer",
+    baseHp: 128,
+    potency: 18,
+    vigor: 25,
+    speed: 11,
+    resin: 23,
+    terpenes: 17,
+    stability: 24,
+    awakeningName: "Royal Pheno",
+    starter: true,
+    moveSlugs: ["basic-strike", "purple-lock"]
+  },
+  {
+    slug: "skunk-scout",
+    name: "Skunk Scout",
+    primaryType: "GAS",
+    secondaryType: null,
+    role: "Enemy striker",
+    baseHp: 84,
+    potency: 18,
+    vigor: 13,
+    speed: 18,
+    resin: 12,
+    terpenes: 14,
+    stability: 12,
+    awakeningName: "Sharp Stink",
+    starter: false,
+    moveSlugs: ["skunk-swipe", "basic-strike"]
+  },
+  {
+    slug: "kush-bruiser",
+    name: "Kush Bruiser",
+    primaryType: "INDICA",
+    secondaryType: null,
+    role: "Enemy tank",
+    baseHp: 120,
+    potency: 20,
+    vigor: 22,
+    speed: 10,
+    resin: 18,
+    terpenes: 12,
+    stability: 18,
+    awakeningName: "Couch Lock",
+    starter: false,
+    moveSlugs: ["kush-crush", "basic-strike"]
+  }
+];
+
+async function main() {
+  for (const move of moves) {
+    await prisma.moveTemplate.upsert({
+      where: { slug: move.slug },
+      update: move,
+      create: move
+    });
+  }
+
+  for (const companion of companions) {
+    const { moveSlugs, ...templateData } = companion;
+    const savedTemplate = await prisma.companionTemplate.upsert({
+      where: { slug: companion.slug },
+      update: templateData,
+      create: templateData
+    });
+
+    for (const moveSlug of moveSlugs) {
+      const move = await prisma.moveTemplate.findUniqueOrThrow({ where: { slug: moveSlug } });
+      await prisma.templateMove.upsert({
+        where: {
+          companionTemplateId_moveTemplateId: {
+            companionTemplateId: savedTemplate.id,
+            moveTemplateId: move.id
+          }
+        },
+        update: {},
+        create: {
+          companionTemplateId: savedTemplate.id,
+          moveTemplateId: move.id,
+          levelRequired: 1
+        }
+      });
+    }
+  }
+
+  await prisma.npcTemplate.upsert({
+    where: { slug: "rival-grower-ashtray" },
+    update: {
+      name: "Rival Grower Ashtray",
+      partyJson: [
+        { templateSlug: "skunk-scout", level: 1 },
+        { templateSlug: "kush-bruiser", level: 1 }
+      ]
+    },
+    create: {
+      slug: "rival-grower-ashtray",
+      name: "Rival Grower Ashtray",
+      partyJson: [
+        { templateSlug: "skunk-scout", level: 1 },
+        { templateSlug: "kush-bruiser", level: 1 }
+      ]
+    }
+  });
+
+  console.log("Seeded THC: Pheno Quest vertical slice data.");
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
