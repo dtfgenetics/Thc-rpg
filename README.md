@@ -12,6 +12,19 @@ THC: Pheno Quest is a turn-based strain-companion RPG inspired by:
 
 The game is **not** an idle grow game and not a real-time multiplayer game.
 
+## What Exists In This Branch
+
+This branch contains the first real build foundation:
+
+- npm workspace monorepo
+- shared TypeScript battle package
+- Prisma database schema
+- starter seed data
+- Express API
+- server-authoritative battle engine
+- simple Next.js battle page
+- route target: `/games/pheno-quest`
+
 ## Vertical Playable Slice 1
 
 The first build proves the combat loop before the project expands into overworld, breeding, trading, guilds, or async PvP.
@@ -40,15 +53,45 @@ The first build proves the combat loop before the project expands into overworld
 - No always-on real-time sync
 - No full overworld until combat feels good
 
-## Current Build Path
+## Local Setup
+
+Requirements:
+
+- Node.js 20+
+- PostgreSQL
+- npm
 
 ```bash
 npm install
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+npm run db:generate
 npm run db:migrate
 npm run db:seed
+```
+
+Run the API:
+
+```bash
 npm run dev:api
+```
+
+Run the web app in another terminal:
+
+```bash
 npm run dev:web
+```
+
+Open:
+
+```text
+http://localhost:3000/games/pheno-quest
+```
+
+API health check:
+
+```text
+http://localhost:4000/health
 ```
 
 ## Repo Structure
@@ -59,16 +102,37 @@ apps/
   web/      Next.js frontend
 packages/
   shared/   Shared TypeScript types and battle math
-docs/       Game mechanics, vertical slice, deployment notes
+docs/       Game mechanics, schema, API, deployment notes
 tasks/      Implementation checklist
+```
+
+## Core API Routes
+
+```text
+GET  /health
+POST /dev/player
+GET  /players/:playerId
+POST /battles/start
+GET  /battles/:battleId
+POST /battles/:battleId/turn
+POST /battles/:battleId/awaken
 ```
 
 ## Production Target
 
-The target game hub is `dtfseeds.com`, with a future playable route such as:
+The target game hub is `dtfseeds.com`, with a playable route such as:
 
 ```text
 /games/pheno-quest/
 ```
 
-The safest deployment model is a static/frontend site on the existing hub plus an API/database backend hosted on the VPS or a managed backend.
+The safest deployment model is:
+
+```text
+Frontend: Next.js route on the website or game subdomain
+Backend: Express API on VPS
+Database: PostgreSQL on VPS or managed Postgres
+Reverse proxy: Nginx or hosting panel routing
+```
+
+Do not expose database credentials to the frontend.
