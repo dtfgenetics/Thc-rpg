@@ -24,6 +24,8 @@ This branch contains the first real build foundation:
 - server-authoritative battle engine
 - simple Next.js battle page
 - route target: `/games/pheno-quest`
+- Docker Compose PostgreSQL for local development
+- GitHub Actions CI for build/test/database validation
 
 ## Vertical Playable Slice 1
 
@@ -58,13 +60,22 @@ The first build proves the combat loop before the project expands into overworld
 Requirements:
 
 - Node.js 20+
-- PostgreSQL
 - npm
+- Docker Desktop, or your own PostgreSQL server
+
+Fast setup:
+
+```bash
+npm run setup:local
+```
+
+Manual setup:
 
 ```bash
 npm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
+npm run db:up
 npm run db:generate
 npm run db:migrate
 npm run db:seed
@@ -92,6 +103,12 @@ API health check:
 
 ```text
 http://localhost:4000/health
+```
+
+Expected response:
+
+```json
+{ "status": "ok" }
 ```
 
 ## Repo Structure
