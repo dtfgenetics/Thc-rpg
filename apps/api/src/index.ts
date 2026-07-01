@@ -1,0 +1,121 @@
+import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import { z } from "zod";
+import { health } from "./health.js";
+import {
+  activateAwakening,
+  ensureDevPlayer,
+  getBattleState,
+  getPlayerSummary,
+  resolvePlayerTurn,
+  startBattle
+} from "./services/battleEngine.js";
+
+dotenv.config();
+
+const app = express();
+const port = Number(process.env.PORT || 4000);
+const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+
+app.use(cors({ origin: corsOrigin }));
+app.use(express.json());
+
+app.get("/health", (_request, response) => {
+  response.json(health);
+});
+
+app.post("/dev/player", async (request, response, next) => {
+  try {
+    const schema = z.object({ handle: z.string().min(2).max(40).optional() });
+    const body = schema.parse(request.body ?? {});
+    const player = await ensureDevPlayer(body.handle);
+    const summary = await getPlayerSummary(player.id);
+    response.json(summary);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/players/:playerId", async (request, response, next) => {
+  try {
+    const player = await getPlayerSummary(request.params.playerId);
+    response.json(player);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/battles/start", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      npcSlug: z.string().min(1).optional()
+    });
+    const body = schema.parse(request.body);
+    const battle = await startBattle(body.playerId, body.npcSlug);
+    response.json(battle);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/battles/:battleId", async (request, response, next) => {
+  try {
+    const battle = await getBattleState(request.params.battleId);
+    response.json(battle);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/battles/:battleId/turn", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      actorId: z.string().min(1),
+      targetId: z.string().min(1),
+      moveSlug: z.string().min(1),
+      timing: z.object({
+        grade: z.enum(["MISS", "GOOD", "PERFECT"]),
+        hitCount: z.number().int().min(0).max(10)
+      })
+    });
+    const body = schema.parse(request.body);
+    const battle = await resolvePlayerTurn({
+      battleId: request.params.battleId,
+      playerId: body.playerId,
+      actorId: body.actorId,
+      targetId: body.targetId,
+      moveSlug: body.moveSlug,
+      timing: body.timing
+    });
+    response.json(battle);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/battles/:battleId/awaken", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      actorId: z.string().min(1)
+    });
+    const body = schema.parse(request.body);
+    const battle = await activateAwakening(request.params.battleId, body.playerId, body.actorId);
+    response.json(battle);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  const message = error instanceof Error ? error.message : "Unknown server error";
+  const status = message.includes("not") || message.includes("does not") ? 404 : 400;
+  response.status(status).json({ error: message });
+});
+
+app.listen(port, () => {
+  console.log(`THC: Pheno Quest API running on http://localhost:${port}`);
+});
