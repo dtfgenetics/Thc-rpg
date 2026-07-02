@@ -41,19 +41,21 @@ enum QuestStatus {
 }
 
 model Player {
-  id            String                @id @default(cuid())
-  handle        String                @unique
-  kushCoin      Int                   @default(0)
-  reputation    Int                   @default(0)
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  companions    PlayerCompanion[]
-  partySlots    PartySlot[]
-  battles       Battle[]
-  inventory     PlayerInventoryItem[]
-  unlocks       PlayerUnlock[]
-  quests        PlayerQuest[]
-  recruitClaims PlayerRecruitClaim[]
+  id              String                 @id @default(cuid())
+  handle          String                 @unique
+  kushCoin        Int                    @default(0)
+  reputation      Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  companions      PlayerCompanion[]
+  partySlots      PartySlot[]
+  battles         Battle[]
+  inventory       PlayerInventoryItem[]
+  unlocks         PlayerUnlock[]
+  quests          PlayerQuest[]
+  recruitClaims   PlayerRecruitClaim[]
+  saveState       PlayerSaveState?
+  savePointVisits PlayerSavePointVisit[]
 }
 
 model CompanionTemplate {
@@ -249,17 +251,17 @@ model PlayerQuest {
 }
 
 model RecruitEvent {
-  id                    String            @id @default(cuid())
-  slug                  String            @unique
+  id                    String               @id @default(cuid())
+  slug                  String               @unique
   companionTemplateSlug String
   displayName           String
   description           String
   requirementsJson      Json
   rewardText            String
-  companionTemplate     CompanionTemplate @relation(fields: [companionTemplateSlug], references: [slug])
+  companionTemplate     CompanionTemplate    @relation(fields: [companionTemplateSlug], references: [slug])
   claims                PlayerRecruitClaim[]
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 }
 
 model PlayerRecruitClaim {
@@ -272,4 +274,38 @@ model PlayerRecruitClaim {
   recruitEvent   RecruitEvent @relation(fields: [recruitEventId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, recruitEventId])
+}
+
+model SavePointTemplate {
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  name         String
+  regionSlug   String
+  description  String
+  recoveryType String                 @default("PARTY_RECOVER")
+  unlockSlug   String
+  visits       PlayerSavePointVisit[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+}
+
+model PlayerSaveState {
+  id                String   @id @default(cuid())
+  playerId          String   @unique
+  activeRegionSlug  String?
+  lastSavePointSlug String?
+  lastSavedAt       DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  player            Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model PlayerSavePointVisit {
+  id            String            @id @default(cuid())
+  playerId      String
+  savePointSlug String
+  visitedAt     DateTime          @default(now())
+  player        Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  savePoint     SavePointTemplate @relation(fields: [savePointSlug], references: [slug])
+
+  @@unique([playerId, savePointSlug])
 }
