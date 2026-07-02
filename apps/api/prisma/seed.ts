@@ -179,6 +179,64 @@ const companions = [
   }
 ];
 
+const items = [
+  {
+    slug: "terp-tonic",
+    name: "Terp Tonic",
+    kind: "CONSUMABLE" as const,
+    description: "A small restorative item used from the menu in later builds.",
+    stackable: true,
+    useContext: "MENU",
+    effectJson: { type: "HEAL_HP", amount: 30 }
+  },
+  {
+    slug: "grinder-relic",
+    name: "Grinder Relic",
+    kind: "KEY_TOOL" as const,
+    description: "A key tool that breaks brittle resin walls in Grower's Grove.",
+    stackable: false,
+    useContext: "MAP",
+    effectJson: { type: "CLEAR_OBSTACLE", requiredTargetTag: "BRITTLE_RESIN", unlockSlug: "cleared:resin-wall-grove" }
+  },
+  {
+    slug: "vapor-lens",
+    name: "Vapor Lens",
+    kind: "KEY_TOOL" as const,
+    description: "A key tool that reveals hidden smoke paths.",
+    stackable: false,
+    useContext: "MAP",
+    effectJson: { type: "REVEAL_PATH", requiredTargetTag: "SMOKE_PATH", unlockSlug: "cleared:smoke-path-grove" }
+  },
+  {
+    slug: "trimmer-blade",
+    name: "Trimmer Blade",
+    kind: "KEY_TOOL" as const,
+    description: "A key tool used to clear overgrown vine gates.",
+    stackable: false,
+    useContext: "MAP",
+    effectJson: { type: "CLEAR_OBSTACLE", requiredTargetTag: "OVERGROWTH" }
+  }
+];
+
+const obstacles = [
+  {
+    slug: "resin-wall-grove",
+    name: "Brittle Resin Wall",
+    regionSlug: "growers-grove",
+    description: "A hardened resin wall blocks a shortcut in Grower's Grove.",
+    requiredItemSlug: "grinder-relic",
+    clearedUnlockSlug: "cleared:resin-wall-grove"
+  },
+  {
+    slug: "smoke-path-grove",
+    name: "Hidden Smoke Path",
+    regionSlug: "growers-grove",
+    description: "A strange smoke veil hides a path deeper into the grove.",
+    requiredItemSlug: "vapor-lens",
+    clearedUnlockSlug: "cleared:smoke-path-grove"
+  }
+];
+
 async function main() {
   for (const move of moves) {
     await prisma.moveTemplate.upsert({
@@ -234,7 +292,23 @@ async function main() {
     }
   });
 
-  console.log("Seeded THC: Pheno Quest vertical slice data.");
+  for (const item of items) {
+    await prisma.itemTemplate.upsert({
+      where: { slug: item.slug },
+      update: item,
+      create: item
+    });
+  }
+
+  for (const obstacle of obstacles) {
+    await prisma.mapObstacleTemplate.upsert({
+      where: { slug: obstacle.slug },
+      update: obstacle,
+      create: obstacle
+    });
+  }
+
+  console.log("Seeded THC: Pheno Quest vertical slice data, items, and map obstacles.");
 }
 
 main()
