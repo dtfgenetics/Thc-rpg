@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { calculateDamage, canActivateAwakening, getTimingMultiplier } from "./battleMath";
-import type { CombatantState, MoveTemplateView } from "./battleTypes";
+import { calculateDamage, canActivateAwakening, getTimingMultiplier } from "./battleMath.js";
+import type { CombatantState, MoveTemplateView } from "./battleTypes.js";
 
 const move: MoveTemplateView = {
   slug: "test-hit",
