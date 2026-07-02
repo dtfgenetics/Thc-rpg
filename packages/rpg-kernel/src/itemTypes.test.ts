@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canStack, isKeyTool, type ItemTemplateView } from "./itemTypes";
+import { canStack, isKeyTool, type ItemTemplateView } from "./itemTypes.js";
 
 const grinder: ItemTemplateView = {
   slug: "grinder-relic",
