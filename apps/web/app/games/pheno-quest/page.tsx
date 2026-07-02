@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryStackView, UnlockView } from "@thc/rpg-kernel";
 import type { BattleState, CombatantState, MoveTemplateView, TimingGrade } from "@thc/shared";
 import { useMemo, useState } from "react";
 
@@ -15,6 +16,21 @@ type PlayerSummary = {
 type PendingMove = {
   move: MoveTemplateView;
   startedAt: number;
+};
+
+type InventoryState = {
+  inventory: InventoryStackView[];
+  unlocks: UnlockView[];
+};
+
+type InteractionResponse = InventoryState & {
+  result: {
+    success: boolean;
+    message: string;
+    grantedItemSlug?: string;
+    consumedItemSlug?: string;
+    unlockedSlug?: string;
+  };
 };
 
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
@@ -54,12 +70,18 @@ function timingFromElapsed(elapsedMs: number, patternLength: number): { grade: T
 export default function PhenoQuestPage() {
   const [player, setPlayer] = useState<PlayerSummary | null>(null);
   const [battle, setBattle] = useState<BattleState | null>(null);
+  const [inventoryState, setInventoryState] = useState<InventoryState | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [message, setMessage] = useState("Load a dev player to begin the vertical slice.");
   const [loading, setLoading] = useState(false);
 
   const playerActor = useMemo(() => (battle ? firstAlive(battle.playerTeam) : undefined), [battle]);
   const enemyTarget = useMemo(() => (battle ? firstAlive(battle.enemyTeam) : undefined), [battle]);
+
+  async function refreshInventory(playerId: string) {
+    const nextInventory = await api<InventoryState>(`/inventory/${playerId}`);
+    setInventoryState(nextInventory);
+  }
 
   async function loadDevPlayer() {
     setLoading(true);
@@ -69,7 +91,8 @@ export default function PhenoQuestPage() {
         body: JSON.stringify({ handle: "DTF Demo Grower" })
       });
       setPlayer(loadedPlayer);
-      setMessage(`Loaded ${loadedPlayer.handle}. Start the rival battle.`);
+      await refreshInventory(loadedPlayer.id);
+      setMessage(`Loaded ${loadedPlayer.handle}. Start the rival battle or test item/tool actions.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to load player.");
     } finally {
@@ -90,6 +113,57 @@ export default function PhenoQuestPage() {
       setMessage("Battle started. Choose a move, then hit the timing button close to the target.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to start battle.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function pickUpItem(itemSlug: string, quantity = 1) {
+    if (!player) return;
+    setLoading(true);
+    try {
+      const response = await api<InteractionResponse>("/inventory/pickup", {
+        method: "POST",
+        body: JSON.stringify({ playerId: player.id, itemSlug, quantity })
+      });
+      setInventoryState({ inventory: response.inventory, unlocks: response.unlocks });
+      setMessage(response.result.message);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to pick up item.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function useInventoryItem(itemSlug: string) {
+    if (!player) return;
+    setLoading(true);
+    try {
+      const response = await api<InteractionResponse>("/inventory/use", {
+        method: "POST",
+        body: JSON.stringify({ playerId: player.id, itemSlug })
+      });
+      setInventoryState({ inventory: response.inventory, unlocks: response.unlocks });
+      setMessage(response.result.message);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to use item.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function useToolOnObstacle(toolSlug: string, obstacleSlug: string) {
+    if (!player) return;
+    setLoading(true);
+    try {
+      const response = await api<InteractionResponse>("/interactions/use-tool", {
+        method: "POST",
+        body: JSON.stringify({ playerId: player.id, toolSlug, obstacleSlug })
+      });
+      setInventoryState({ inventory: response.inventory, unlocks: response.unlocks });
+      setMessage(response.result.message);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to use tool.");
     } finally {
       setLoading(false);
     }
@@ -169,6 +243,16 @@ export default function PhenoQuestPage() {
         </section>
       )}
 
+      {player && (
+        <InventoryPanel
+          inventoryState={inventoryState}
+          loading={loading}
+          onPickup={pickUpItem}
+          onUseItem={useInventoryItem}
+          onUseTool={useToolOnObstacle}
+        />
+      )}
+
       {battle ? (
         <section className="battle-grid">
           <TeamPanel title="Your Party" team={battle.playerTeam} />
@@ -191,6 +275,62 @@ export default function PhenoQuestPage() {
         </section>
       )}
     </main>
+  );
+}
+
+function InventoryPanel({
+  inventoryState,
+  loading,
+  onPickup,
+  onUseItem,
+  onUseTool
+}: {
+  inventoryState: InventoryState | null;
+  loading: boolean;
+  onPickup: (itemSlug: string, quantity?: number) => void;
+  onUseItem: (itemSlug: string) => void;
+  onUseTool: (toolSlug: string, obstacleSlug: string) => void;
+}) {
+  return (
+    <section className="action-lab">
+      <div>
+        <h2>Action System Test</h2>
+        <p>These buttons prove the item, inventory, key-tool, obstacle, and unlock loop before we build the full map.</p>
+        <div className="action-buttons">
+          <button disabled={loading} onClick={() => onPickup("terp-tonic", 3)}>Pick Up 3 Terp Tonics</button>
+          <button disabled={loading} onClick={() => onPickup("grinder-relic")}>Pick Up Grinder Relic</button>
+          <button disabled={loading} onClick={() => onPickup("vapor-lens")}>Pick Up Vapor Lens</button>
+          <button disabled={loading} onClick={() => onUseTool("grinder-relic", "resin-wall-grove")}>Use Grinder On Resin Wall</button>
+          <button disabled={loading} onClick={() => onUseTool("vapor-lens", "smoke-path-grove")}>Use Vapor Lens On Smoke Path</button>
+        </div>
+      </div>
+
+      <div className="inventory-card">
+        <h3>Inventory</h3>
+        {inventoryState?.inventory.length ? (
+          inventoryState.inventory.map((stack) => (
+            <article key={stack.item.slug} className="inventory-row">
+              <div>
+                <strong>{stack.item.name}</strong>
+                <small>{stack.item.kind} · x{stack.quantity}</small>
+              </div>
+              {stack.item.kind !== "KEY_TOOL" && (
+                <button disabled={loading} onClick={() => onUseItem(stack.item.slug)}>Use</button>
+              )}
+            </article>
+          ))
+        ) : (
+          <p>No items yet.</p>
+        )}
+
+        <h3>Unlocks</h3>
+        {inventoryState?.unlocks.length ? (
+          inventoryState.unlocks.map((unlock) => <small key={unlock.slug}>{unlock.slug}</small>)
+        ) : (
+          <p>No map unlocks yet.</p>
+        )}
+      </div>
+    </section>
   );
 }
 
