@@ -12,6 +12,7 @@ import {
   startBattle
 } from "./services/battleEngine.js";
 import { getPlayerInventory, grantItem, useConsumable, useToolOnObstacle } from "./services/inventoryEngine.js";
+import { addCompanionToParty, getPartyState, removeCompanionFromParty, swapPartyPositions } from "./services/partyEngine.js";
 import {
   advanceQuest,
   claimQuest,
@@ -51,6 +52,52 @@ app.get("/players/:playerId", async (request, response, next) => {
   try {
     const player = await getPlayerSummary(request.params.playerId);
     response.json(player);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/party/:playerId", async (request, response, next) => {
+  try {
+    const party = await getPartyState(request.params.playerId);
+    response.json(party);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/party/add", async (request, response, next) => {
+  try {
+    const schema = z.object({ playerId: z.string().min(1), companionId: z.string().min(1) });
+    const body = schema.parse(request.body);
+    const result = await addCompanionToParty(body.playerId, body.companionId);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/party/remove", async (request, response, next) => {
+  try {
+    const schema = z.object({ playerId: z.string().min(1), companionId: z.string().min(1) });
+    const body = schema.parse(request.body);
+    const result = await removeCompanionFromParty(body.playerId, body.companionId);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/party/swap", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      firstCompanionId: z.string().min(1),
+      secondCompanionId: z.string().min(1)
+    });
+    const body = schema.parse(request.body);
+    const result = await swapPartyPositions(body.playerId, body.firstCompanionId, body.secondCompanionId);
+    response.json(result);
   } catch (error) {
     next(error);
   }
