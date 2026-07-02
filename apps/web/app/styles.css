@@ -58,7 +58,8 @@ button:disabled {
 .team-panel,
 .battle-center,
 .result-card,
-.action-lab {
+.action-lab,
+.grove-shell {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(16, 32, 22, 0.92);
@@ -102,7 +103,8 @@ button:disabled {
 .status-card,
 .player-card,
 .empty-card,
-.action-lab {
+.action-lab,
+.grove-shell {
   margin-bottom: 1rem;
   padding: 1rem;
 }
@@ -157,6 +159,39 @@ button:disabled {
 
 .inventory-card small {
   display: block;
+}
+
+.grove-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.grove-status {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  padding: 0.9rem 1rem;
+}
+
+.grove-status strong {
+  color: var(--text);
+}
+
+.grove-canvas {
+  align-items: center;
+  background: #07140d;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  min-height: 480px;
+  overflow: hidden;
+}
+
+.grove-canvas canvas {
+  border-radius: 10px;
+  max-width: 100%;
 }
 
 .battle-grid {
