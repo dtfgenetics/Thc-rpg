@@ -198,6 +198,8 @@ function CompanionCard({
   disabled?: boolean;
   onAction: () => void;
 }) {
+  const hpPercent = Math.max(0, Math.min(100, Math.round((companion.currentHp / companion.maxHp) * 100)));
+
   return (
     <article className="roster-card">
       <div className="roster-head">
@@ -208,8 +210,12 @@ function CompanionCard({
         {companion.partyPosition && <span className="slot-badge">Slot {companion.partyPosition}</span>}
       </div>
       <p>{companion.role}</p>
+      <div className="hp-track">
+        <div className="hp-fill" style={{ width: `${hpPercent}%` }} />
+      </div>
+      <small>{companion.fainted ? "Fainted" : "Ready"} · HP {companion.currentHp}/{companion.maxHp}</small>
       <div className="stat-grid">
-        <span>HP {companion.stats.hp}</span>
+        <span>Max HP {companion.stats.hp}</span>
         <span>Potency {companion.stats.potency}</span>
         <span>Vigor {companion.stats.vigor}</span>
         <span>Speed {companion.stats.speed}</span>
