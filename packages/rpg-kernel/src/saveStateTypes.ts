@@ -1,4 +1,4 @@
-import type { InventoryStackView } from "./itemTypes";
+import type { InventoryStackView } from "./itemTypes.js";
 
 export interface PlayerProgressState {
   playerId: string;
