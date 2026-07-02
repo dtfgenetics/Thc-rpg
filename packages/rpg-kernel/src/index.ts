@@ -6,4 +6,5 @@ export * from "./partyTypes.js";
 export * from "./questTypes.js";
 export * from "./recruitmentTypes.js";
 export * from "./regionTypes.js";
+export * from "./savePointTypes.js";
 export * from "./saveStateTypes.js";
