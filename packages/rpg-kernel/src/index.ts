@@ -1,3 +1,4 @@
+export * from "./entityTypes.js";
 export * from "./itemTypes.js";
 export * from "./interactionTypes.js";
 export * from "./regionTypes.js";
