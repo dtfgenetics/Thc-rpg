@@ -22,6 +22,7 @@ import {
   recruitCompanion,
   startQuest
 } from "./services/progressionEngine.js";
+import { getPlayerSaveState, getRegionSavePoints, useSavePoint } from "./services/savePointEngine.js";
 
 dotenv.config();
 
@@ -97,6 +98,35 @@ app.post("/party/swap", async (request, response, next) => {
     });
     const body = schema.parse(request.body);
     const result = await swapPartyPositions(body.playerId, body.firstCompanionId, body.secondCompanionId);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/savepoints/player/:playerId", async (request, response, next) => {
+  try {
+    const saveState = await getPlayerSaveState(request.params.playerId);
+    response.json(saveState);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/savepoints/region/:regionSlug", async (request, response, next) => {
+  try {
+    const savePoints = await getRegionSavePoints(request.params.regionSlug);
+    response.json({ savePoints });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/savepoints/use", async (request, response, next) => {
+  try {
+    const schema = z.object({ playerId: z.string().min(1), savePointSlug: z.string().min(1) });
+    const body = schema.parse(request.body);
+    const result = await useSavePoint(body.playerId, body.savePointSlug);
     response.json(result);
   } catch (error) {
     next(error);
