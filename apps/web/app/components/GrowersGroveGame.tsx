@@ -28,6 +28,15 @@ type RecruitmentResponse = {
   message: string;
 };
 
+type SavePointResponse = {
+  success: boolean;
+  message: string;
+  saveState: {
+    lastSavePointSlug?: string | null;
+    lastSavedAt?: string | null;
+  };
+};
+
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -66,7 +75,7 @@ export default function GrowersGroveGame() {
 
       playerIdRef.current = devPlayer.id;
       setPlayerHandle(devPlayer.handle);
-      setMessage("Use arrow keys/WASD to move Seed Man. Walk into NPCs, items, and obstacles to test the first chapter.");
+      setMessage("Use arrow keys/WASD to move Seed Man. Walk into NPCs, items, obstacles, and the Cure Station.");
 
       class GrowersGroveScene extends Phaser.Scene {
         private seedMan!: Phaser.GameObjects.Container;
@@ -88,7 +97,7 @@ export default function GrowersGroveGame() {
           this.cameras.main.setBackgroundColor("#0d2414");
           this.add.rectangle(400, 260, 760, 460, 0x14351d).setStrokeStyle(4, 0x6da94d);
           this.add.text(28, 24, "Grower’s Grove", { fontSize: "24px", color: "#f4ffe8", fontStyle: "bold" });
-          this.add.text(28, 54, "Seed Man tutorial zone — clear the resin wall and recruit Skunk Scout", {
+          this.add.text(28, 54, "Seed Man tutorial zone — clear the resin wall, save at the Cure Station, and recruit Skunk Scout", {
             fontSize: "14px",
             color: "#bad1b1"
           });
@@ -100,6 +109,7 @@ export default function GrowersGroveGame() {
           drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff);
           drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31);
           drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff);
+          drawSavePoint(this, 430, 260, "growers-grove-cure-station", "Cure Station");
           drawNpc(this, 665, 260, "rival-grower-ashtray", "Rival Grower Ashtray", 0x5d3a24);
 
           this.seedMan = createSeedMan(this, 90, 260);
@@ -107,7 +117,7 @@ export default function GrowersGroveGame() {
           this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as Record<string, Phaser.Input.Keyboard.Key>;
 
           this.interactText = this.add
-            .text(24, 450, "Seed Man is ready. Start with Garden Keeper Nugsworth.", {
+            .text(24, 450, "Seed Man is ready. Start with Garden Keeper Nugsworth, then use the Cure Station before battling.", {
               fontSize: "15px",
               color: "#f4ffe8",
               backgroundColor: "#102016",
@@ -162,6 +172,11 @@ export default function GrowersGroveGame() {
             await this.runAction(
               () => useTool(playerId, "vapor-lens", "smoke-path-grove"),
               "Seed Man used the Vapor Lens to reveal the smoke path."
+            );
+          } else if (Phaser.Math.Distance.Between(x, y, 430, 260) < 54) {
+            await this.runAction(
+              () => saveAtCureStation(playerId),
+              "Seed Man rested at the Grower’s Grove Cure Station."
             );
           } else if (Phaser.Math.Distance.Between(x, y, 665, 260) < 54) {
             this.actionLocked = true;
@@ -297,6 +312,13 @@ async function useToolAndAdvance(playerId: string, toolSlug: string, obstacleSlu
   return { message: `${action.result.message} ${quest.message}` };
 }
 
+async function saveAtCureStation(playerId: string): Promise<SavePointResponse> {
+  return api<SavePointResponse>("/savepoints/use", {
+    method: "POST",
+    body: JSON.stringify({ playerId, savePointSlug: "growers-grove-cure-station" })
+  });
+}
+
 function createGeneratedTextures(scene: Phaser.Scene) {
   const graphics = scene.add.graphics();
 
@@ -349,6 +371,14 @@ function drawObstacle(scene: Phaser.Scene, x: number, y: number, slug: string, l
   scene.add.rectangle(x, y, 92, 38, color, 0.85).setStrokeStyle(3, 0x331b07, 0.8);
   scene.add.text(x - 56, y + 28, label, { fontSize: "12px", color: "#f4ffe8" });
   scene.add.text(x - 50, y - 40, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
+}
+
+function drawSavePoint(scene: Phaser.Scene, x: number, y: number, slug: string, label: string) {
+  scene.add.circle(x, y, 28, 0x6fdb5c, 0.18).setStrokeStyle(3, 0x9ef25b, 0.75);
+  scene.add.rectangle(x, y, 42, 52, 0x1f5b3a, 0.95).setStrokeStyle(3, 0xf5c84b, 0.85);
+  scene.add.circle(x, y - 18, 10, 0x9ef25b, 0.95);
+  scene.add.text(x - 40, y + 36, label, { fontSize: "12px", color: "#f4ffe8" });
+  scene.add.text(x - 58, y - 52, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
 }
 
 function drawNpc(scene: Phaser.Scene, x: number, y: number, slug: string, label: string, color: number) {
