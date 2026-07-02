@@ -237,10 +237,11 @@ app.post("/inventory/use", async (request, response, next) => {
   try {
     const schema = z.object({
       playerId: z.string().min(1),
-      itemSlug: z.string().min(1)
+      itemSlug: z.string().min(1),
+      targetCompanionId: z.string().min(1).optional()
     });
     const body = schema.parse(request.body);
-    const result = await useConsumable(body.playerId, body.itemSlug);
+    const result = await useConsumable(body.playerId, body.itemSlug, body.targetCompanionId);
     response.json(result);
   } catch (error) {
     next(error);
