@@ -12,6 +12,15 @@ import {
   startBattle
 } from "./services/battleEngine.js";
 import { getPlayerInventory, grantItem, useConsumable, useToolOnObstacle } from "./services/inventoryEngine.js";
+import {
+  advanceQuest,
+  claimQuest,
+  getDialogue,
+  getPlayerQuests,
+  getRecruitEvents,
+  recruitCompanion,
+  startQuest
+} from "./services/progressionEngine.js";
 
 dotenv.config();
 
@@ -42,6 +51,82 @@ app.get("/players/:playerId", async (request, response, next) => {
   try {
     const player = await getPlayerSummary(request.params.playerId);
     response.json(player);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/dialogue/:dialogueSlug", async (request, response, next) => {
+  try {
+    const dialogue = await getDialogue(request.params.dialogueSlug);
+    response.json(dialogue);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/quests/:playerId", async (request, response, next) => {
+  try {
+    const quests = await getPlayerQuests(request.params.playerId);
+    response.json({ quests });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/quests/start", async (request, response, next) => {
+  try {
+    const schema = z.object({ playerId: z.string().min(1), questSlug: z.string().min(1) });
+    const body = schema.parse(request.body);
+    const quest = await startQuest(body.playerId, body.questSlug);
+    response.json({ quest, message: `${quest.quest.name} started.` });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/quests/advance", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      questSlug: z.string().min(1),
+      actionType: z.enum(["TALK", "PICKUP", "USE_TOOL", "BATTLE_WIN", "RETURN", "RECRUIT"]),
+      targetSlug: z.string().min(1)
+    });
+    const body = schema.parse(request.body);
+    const result = await advanceQuest(body);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/quests/claim", async (request, response, next) => {
+  try {
+    const schema = z.object({ playerId: z.string().min(1), questSlug: z.string().min(1) });
+    const body = schema.parse(request.body);
+    const result = await claimQuest(body.playerId, body.questSlug);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/recruitment/:playerId", async (request, response, next) => {
+  try {
+    const recruitEvents = await getRecruitEvents(request.params.playerId);
+    response.json({ recruitEvents });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/recruitment/recruit", async (request, response, next) => {
+  try {
+    const schema = z.object({ playerId: z.string().min(1), recruitSlug: z.string().min(1) });
+    const body = schema.parse(request.body);
+    const result = await recruitCompanion(body.playerId, body.recruitSlug);
+    response.json(result);
   } catch (error) {
     next(error);
   }
