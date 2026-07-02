@@ -1,3 +1,3 @@
-export * from "./battleTypes";
-export * from "./battleMath";
-export * from "./typeChart";
+export * from "./battleTypes.js";
+export * from "./battleMath.js";
+export * from "./typeChart.js";
