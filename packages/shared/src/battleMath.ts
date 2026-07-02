@@ -4,8 +4,8 @@ import type {
   MoveTemplateView,
   TimingGrade,
   TimingResultInput
-} from "./battleTypes";
-import { getTypeMultiplier } from "./typeChart";
+} from "./battleTypes.js";
+import { getTypeMultiplier } from "./typeChart.js";
 
 export const AWAKENING_THRESHOLD = 100;
 export const AWAKENING_DURATION_TURNS = 3;
