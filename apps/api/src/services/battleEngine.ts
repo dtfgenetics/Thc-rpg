@@ -64,6 +64,10 @@ function scaledStat(base: number, level: number, perLevel = 2): number {
   return base + Math.max(0, level - 1) * perLevel;
 }
 
+function scaledMaxHp(template: CompanionTemplate, level: number): number {
+  return scaledStat(template.baseHp, level, 10);
+}
+
 function templateToCombatant(params: {
   id: string;
   template: TemplateWithMoves;
@@ -71,9 +75,11 @@ function templateToCombatant(params: {
   level: number;
   xp?: number;
   nickname?: string | null;
+  currentHp?: number | null;
 }): CombatantState {
-  const { id, template, side, level, xp = 0, nickname } = params;
-  const maxHp = scaledStat(template.baseHp, level, 10);
+  const { id, template, side, level, xp = 0, nickname, currentHp } = params;
+  const maxHp = scaledMaxHp(template, level);
+  const safeCurrentHp = Math.max(0, Math.min(maxHp, currentHp ?? maxHp));
 
   return {
     id,
@@ -86,7 +92,7 @@ function templateToCombatant(params: {
     level,
     xp,
     maxHp,
-    currentHp: maxHp,
+    currentHp: safeCurrentHp,
     stats: {
       hp: maxHp,
       potency: scaledStat(template.potency, level),
@@ -133,7 +139,8 @@ export async function ensureDevPlayer(handle = "DTF Demo Grower") {
         playerId: player.id,
         templateId: starter.id,
         level: 1,
-        xp: 0
+        xp: 0,
+        currentHp: scaledMaxHp(starter, 1)
       }
     });
 
@@ -206,9 +213,14 @@ export async function startBattle(playerId: string, npcSlug = DEFAULT_NPC_SLUG):
       side: "PLAYER",
       level: slot.companion.level,
       xp: slot.companion.xp,
-      nickname: slot.companion.nickname
+      nickname: slot.companion.nickname,
+      currentHp: slot.companion.currentHp
     })
   );
+
+  if (isTeamDefeated(playerTeam)) {
+    throw new Error("All active companions are fainted. Use a Cure Station before starting another battle.");
+  }
 
   const enemyTeam: CombatantState[] = [];
   for (const [index, entry] of npcParty.entries()) {
@@ -452,7 +464,8 @@ async function finishBattle(battle: Battle, state: BattleState, outcome: "WON" |
         where: { id: combatant.id },
         data: {
           level: nextProgress.level,
-          xp: nextProgress.xp
+          xp: nextProgress.xp,
+          currentHp: Math.max(0, combatant.currentHp)
         }
       });
     }
@@ -460,8 +473,15 @@ async function finishBattle(battle: Battle, state: BattleState, outcome: "WON" |
     state.log.push({
       turn: state.turnNumber,
       side: "SYSTEM",
-      message: "Defeat. Your party can recover and try again."
+      message: "Defeat. Seed Man returned to the last Cure Station. Use it to fully recover and try again."
     });
+
+    for (const combatant of state.playerTeam) {
+      await prisma.playerCompanion.update({
+        where: { id: combatant.id },
+        data: { currentHp: Math.min(1, combatant.maxHp) }
+      });
+    }
   }
 
   await prisma.battle.update({
