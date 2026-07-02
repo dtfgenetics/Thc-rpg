@@ -24,16 +24,28 @@ enum MoveKind {
   DEBUFF
 }
 
+enum ItemKind {
+  CONSUMABLE
+  BATTLE_ITEM
+  KEY_TOOL
+  RELIC
+  GENETICS
+  QUEST
+  MATERIAL
+}
+
 model Player {
-  id          String            @id @default(cuid())
-  handle      String            @unique
-  kushCoin    Int               @default(0)
-  reputation  Int               @default(0)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id          String                @id @default(cuid())
+  handle      String                @unique
+  kushCoin    Int                   @default(0)
+  reputation  Int                   @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
   companions  PlayerCompanion[]
   partySlots  PartySlot[]
   battles     Battle[]
+  inventory   PlayerInventoryItem[]
+  unlocks     PlayerUnlock[]
 }
 
 model CompanionTemplate {
@@ -133,4 +145,56 @@ model Battle {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   player      Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model ItemTemplate {
+  id            String                @id @default(cuid())
+  slug          String                @unique
+  name          String
+  kind          ItemKind
+  description   String
+  stackable     Boolean               @default(true)
+  useContext    String                @default("MENU")
+  effectJson    Json
+  inventoryRows PlayerInventoryItem[]
+  requiredBy    MapObstacleTemplate[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+model PlayerInventoryItem {
+  id        String       @id @default(cuid())
+  playerId  String
+  itemId    String
+  quantity  Int          @default(1)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  player    Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  item      ItemTemplate @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, itemId])
+}
+
+model MapObstacleTemplate {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  name             String
+  regionSlug       String
+  description      String
+  requiredItemSlug String
+  clearedUnlockSlug String
+  requiredItem     ItemTemplate @relation(fields: [requiredItemSlug], references: [slug])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model PlayerUnlock {
+  id        String   @id @default(cuid())
+  playerId  String
+  slug      String
+  source    String
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, slug])
 }
