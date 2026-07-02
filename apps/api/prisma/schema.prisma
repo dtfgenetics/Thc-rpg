@@ -115,6 +115,7 @@ model PlayerCompanion {
   nickname   String?
   level      Int               @default(1)
   xp         Int               @default(0)
+  currentHp  Int?
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
   player     Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
