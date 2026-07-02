@@ -34,18 +34,26 @@ enum ItemKind {
   MATERIAL
 }
 
+enum QuestStatus {
+  ACTIVE
+  COMPLETED
+  CLAIMED
+}
+
 model Player {
-  id          String                @id @default(cuid())
-  handle      String                @unique
-  kushCoin    Int                   @default(0)
-  reputation  Int                   @default(0)
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  companions  PlayerCompanion[]
-  partySlots  PartySlot[]
-  battles     Battle[]
-  inventory   PlayerInventoryItem[]
-  unlocks     PlayerUnlock[]
+  id            String                @id @default(cuid())
+  handle        String                @unique
+  kushCoin      Int                   @default(0)
+  reputation    Int                   @default(0)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  companions    PlayerCompanion[]
+  partySlots    PartySlot[]
+  battles       Battle[]
+  inventory     PlayerInventoryItem[]
+  unlocks       PlayerUnlock[]
+  quests        PlayerQuest[]
+  recruitClaims PlayerRecruitClaim[]
 }
 
 model CompanionTemplate {
@@ -66,6 +74,7 @@ model CompanionTemplate {
   starter        Boolean           @default(false)
   moves          TemplateMove[]
   playerCopies   PlayerCompanion[]
+  recruitEvents  RecruitEvent[]
 }
 
 model MoveTemplate {
@@ -176,16 +185,16 @@ model PlayerInventoryItem {
 }
 
 model MapObstacleTemplate {
-  id               String       @id @default(cuid())
-  slug             String       @unique
-  name             String
-  regionSlug       String
-  description      String
-  requiredItemSlug String
+  id                String       @id @default(cuid())
+  slug              String       @unique
+  name              String
+  regionSlug        String
+  description       String
+  requiredItemSlug  String
   clearedUnlockSlug String
-  requiredItem     ItemTemplate @relation(fields: [requiredItemSlug], references: [slug])
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  requiredItem      ItemTemplate @relation(fields: [requiredItemSlug], references: [slug])
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }
 
 model PlayerUnlock {
@@ -197,4 +206,70 @@ model PlayerUnlock {
   player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, slug])
+}
+
+model DialogueTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  speakerName String
+  regionSlug  String?
+  nodesJson   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model QuestTemplate {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  description String
+  regionSlug  String?
+  stepsJson   Json
+  rewardsJson Json
+  playerRows  PlayerQuest[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PlayerQuest {
+  id               String        @id @default(cuid())
+  playerId         String
+  questTemplateId  String
+  status           QuestStatus   @default(ACTIVE)
+  currentStepIndex Int           @default(0)
+  completedStepIds Json          @default("[]")
+  completedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  player           Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  questTemplate    QuestTemplate @relation(fields: [questTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, questTemplateId])
+}
+
+model RecruitEvent {
+  id                    String            @id @default(cuid())
+  slug                  String            @unique
+  companionTemplateSlug String
+  displayName           String
+  description           String
+  requirementsJson      Json
+  rewardText            String
+  companionTemplate     CompanionTemplate @relation(fields: [companionTemplateSlug], references: [slug])
+  claims                PlayerRecruitClaim[]
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+}
+
+model PlayerRecruitClaim {
+  id             String       @id @default(cuid())
+  playerId       String
+  recruitEventId String
+  companionId    String?
+  createdAt      DateTime     @default(now())
+  player         Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  recruitEvent   RecruitEvent @relation(fields: [recruitEventId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, recruitEventId])
 }
