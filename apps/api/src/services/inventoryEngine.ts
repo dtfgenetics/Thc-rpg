@@ -1,6 +1,10 @@
 import type { InteractionResult, InventoryStackView, ItemEffect, ItemKind, ItemTemplateView, UnlockView } from "@thc/rpg-kernel";
 import { prisma } from "../prismaClient.js";
 
+function scaledMaxHp(baseHp: number, level: number): number {
+  return baseHp + Math.max(0, level - 1) * 10;
+}
+
 function toItemView(item: {
   slug: string;
   name: string;
@@ -99,7 +103,11 @@ export async function grantItem(playerId: string, itemSlug: string, quantity = 1
   };
 }
 
-export async function useConsumable(playerId: string, itemSlug: string): Promise<{
+export async function useConsumable(
+  playerId: string,
+  itemSlug: string,
+  targetCompanionId?: string
+): Promise<{
   result: InteractionResult;
   inventory: InventoryStackView[];
   unlocks: UnlockView[];
@@ -120,22 +128,56 @@ export async function useConsumable(playerId: string, itemSlug: string): Promise
     throw new Error("Key tools are used through map interactions, not consumed.");
   }
 
-  if (row.quantity > 1) {
-    await prisma.playerInventoryItem.update({
-      where: { id: row.id },
-      data: { quantity: { decrement: 1 } }
-    });
-  } else {
-    await prisma.playerInventoryItem.delete({ where: { id: row.id } });
-  }
-
   const effect = row.item.effectJson as ItemEffect;
+  let resultMessage = `${row.item.name} used. Effect queued: ${effect.type}.`;
+
+  await prisma.$transaction(async (tx) => {
+    if (effect.type === "HEAL_HP") {
+      const companions = await tx.playerCompanion.findMany({
+        where: targetCompanionId ? { playerId, id: targetCompanionId } : { playerId },
+        include: { template: true },
+        orderBy: { createdAt: "asc" }
+      });
+
+      const wounded = companions
+        .map((companion) => {
+          const maxHp = scaledMaxHp(companion.template.baseHp, companion.level);
+          const currentHp = Math.max(0, Math.min(maxHp, companion.currentHp ?? maxHp));
+          return { companion, maxHp, currentHp, missingHp: maxHp - currentHp };
+        })
+        .filter((entry) => entry.missingHp > 0)
+        .sort((a, b) => b.missingHp - a.missingHp);
+
+      const target = wounded[0];
+      if (!target) {
+        throw new Error(targetCompanionId ? "Target companion does not need healing." : "No companion needs healing.");
+      }
+
+      const healAmount = Math.max(1, effect.amount ?? 0);
+      const nextHp = Math.min(target.maxHp, target.currentHp + healAmount);
+      await tx.playerCompanion.update({
+        where: { id: target.companion.id },
+        data: { currentHp: nextHp }
+      });
+      resultMessage = `${row.item.name} restored ${nextHp - target.currentHp} HP to ${target.companion.nickname || target.companion.template.name}.`;
+    }
+
+    if (row.quantity > 1) {
+      await tx.playerInventoryItem.update({
+        where: { id: row.id },
+        data: { quantity: { decrement: 1 } }
+      });
+    } else {
+      await tx.playerInventoryItem.delete({ where: { id: row.id } });
+    }
+  });
+
   const state = await getPlayerInventory(playerId);
 
   return {
     result: {
       success: true,
-      message: `${row.item.name} used. Effect queued: ${effect.type}.`,
+      message: resultMessage,
       consumedItemSlug: row.item.slug
     },
     ...state
