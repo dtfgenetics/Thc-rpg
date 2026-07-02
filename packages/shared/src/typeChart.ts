@@ -1,4 +1,4 @@
-import type { CompanionType } from "./battleTypes";
+import type { CompanionType } from "./battleTypes.js";
 
 const STRONG_MATCHUPS: Partial<Record<CompanionType, CompanionType[]>> = {
   SATIVA: ["INDICA"],
