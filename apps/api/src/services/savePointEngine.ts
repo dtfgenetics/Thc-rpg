@@ -1,6 +1,10 @@
 import type { PlayerSaveStateView, SavePointTemplateView, SavePointUseResult } from "@thc/rpg-kernel";
 import { prisma } from "../prismaClient.js";
 
+function scaledMaxHp(baseHp: number, level: number): number {
+  return baseHp + Math.max(0, level - 1) * 10;
+}
+
 function toSavePointView(savePoint: {
   slug: string;
   name: string;
@@ -77,6 +81,20 @@ export async function useSavePoint(playerId: string, savePointSlug: string): Pro
       update: { source: `savepoint:${savePoint.slug}` },
       create: { playerId, slug: savePoint.unlockSlug, source: `savepoint:${savePoint.slug}` }
     });
+
+    if (savePoint.recoveryType !== "SAVE_ONLY") {
+      const companions = await tx.playerCompanion.findMany({
+        where: { playerId },
+        include: { template: true }
+      });
+
+      for (const companion of companions) {
+        await tx.playerCompanion.update({
+          where: { id: companion.id },
+          data: { currentHp: scaledMaxHp(companion.template.baseHp, companion.level) }
+        });
+      }
+    }
   });
 
   const saveState = await getPlayerSaveState(playerId);
