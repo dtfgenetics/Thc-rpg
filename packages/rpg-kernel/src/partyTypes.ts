@@ -8,6 +8,9 @@ export interface CompanionRosterView {
   role: string;
   level: number;
   xp: number;
+  currentHp: number;
+  maxHp: number;
+  fainted: boolean;
   awakeningName: string;
   stats: {
     hp: number;
