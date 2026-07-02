@@ -310,6 +310,17 @@ const recruitEvents = [
   }
 ];
 
+const savePoints = [
+  {
+    slug: "growers-grove-cure-station",
+    name: "Grower’s Grove Cure Station",
+    regionSlug: "growers-grove",
+    description: "A warm clone-dome recovery station where Seed Man can rest, save, and reset before the next grow-world challenge.",
+    recoveryType: "PARTY_RECOVER",
+    unlockSlug: "savepoint:growers-grove-cure-station"
+  }
+];
+
 async function main() {
   for (const move of moves) {
     await prisma.moveTemplate.upsert({
@@ -405,7 +416,15 @@ async function main() {
     });
   }
 
-  console.log("Seeded THC: Pheno Quest data, Grower's Grove quest, dialogue, and recruitment.");
+  for (const savePoint of savePoints) {
+    await prisma.savePointTemplate.upsert({
+      where: { slug: savePoint.slug },
+      update: savePoint,
+      create: savePoint
+    });
+  }
+
+  console.log("Seeded THC: Pheno Quest data, Grower's Grove quest, recruitment, and save point.");
 }
 
 main()
