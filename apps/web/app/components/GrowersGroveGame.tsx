@@ -18,6 +18,16 @@ type InteractionResponse = {
   };
 };
 
+type QuestResponse = {
+  quest?: unknown;
+  message: string;
+};
+
+type RecruitmentResponse = {
+  success: boolean;
+  message: string;
+};
+
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -56,7 +66,7 @@ export default function GrowersGroveGame() {
 
       playerIdRef.current = devPlayer.id;
       setPlayerHandle(devPlayer.handle);
-      setMessage("Use arrow keys/WASD to move Seed Man. Walk into objects to test actions.");
+      setMessage("Use arrow keys/WASD to move Seed Man. Walk into NPCs, items, and obstacles to test the first chapter.");
 
       class GrowersGroveScene extends Phaser.Scene {
         private seedMan!: Phaser.GameObjects.Container;
@@ -78,25 +88,26 @@ export default function GrowersGroveGame() {
           this.cameras.main.setBackgroundColor("#0d2414");
           this.add.rectangle(400, 260, 760, 460, 0x14351d).setStrokeStyle(4, 0x6da94d);
           this.add.text(28, 24, "Grower’s Grove", { fontSize: "24px", color: "#f4ffe8", fontStyle: "bold" });
-          this.add.text(28, 54, "Seed Man tutorial zone — cannabis fantasy/parody placeholder map", {
+          this.add.text(28, 54, "Seed Man tutorial zone — clear the resin wall and recruit Skunk Scout", {
             fontSize: "14px",
             color: "#bad1b1"
           });
 
           drawGroveFloor(this);
+          drawNpc(this, 126, 350, "garden-keeper-intro", "Garden Keeper Nugsworth", 0x6da94d);
           drawActionObject(this, 170, 180, "terp-tonic", "Terp Tonic", 0xf5c84b);
           drawActionObject(this, 600, 175, "grinder-relic", "Grinder Relic", 0xb88746);
           drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff);
           drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31);
           drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff);
-          drawNpc(this, 665, 260, "rival-grower-ashtray", "Rival Grower Ashtray");
+          drawNpc(this, 665, 260, "rival-grower-ashtray", "Rival Grower Ashtray", 0x5d3a24);
 
           this.seedMan = createSeedMan(this, 90, 260);
           this.cursors = this.input.keyboard!.createCursorKeys();
           this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as Record<string, Phaser.Input.Keyboard.Key>;
 
           this.interactText = this.add
-            .text(24, 450, "Seed Man is ready.", {
+            .text(24, 450, "Seed Man is ready. Start with Garden Keeper Nugsworth.", {
               fontSize: "15px",
               color: "#f4ffe8",
               backgroundColor: "#102016",
@@ -134,15 +145,17 @@ export default function GrowersGroveGame() {
           const playerId = playerIdRef.current;
           if (!playerId) return;
 
-          if (Phaser.Math.Distance.Between(x, y, 170, 180) < 36) {
+          if (Phaser.Math.Distance.Between(x, y, 126, 350) < 54) {
+            await this.runAction(() => talkToGardenKeeper(playerId), "Garden Keeper Nugsworth gives Seed Man the Grove quest.");
+          } else if (Phaser.Math.Distance.Between(x, y, 170, 180) < 36) {
             await this.runAction(() => pickup(playerId, "terp-tonic", 1), "Seed Man picked up a Terp Tonic.");
           } else if (Phaser.Math.Distance.Between(x, y, 600, 175) < 38) {
-            await this.runAction(() => pickup(playerId, "grinder-relic", 1), "Seed Man found the Grinder Relic.");
+            await this.runAction(() => pickupAndAdvance(playerId, "grinder-relic"), "Seed Man found the Grinder Relic.");
           } else if (Phaser.Math.Distance.Between(x, y, 612, 340) < 38) {
             await this.runAction(() => pickup(playerId, "vapor-lens", 1), "Seed Man found the Vapor Lens.");
           } else if (Phaser.Math.Distance.Between(x, y, 365, 160) < 52) {
             await this.runAction(
-              () => useTool(playerId, "grinder-relic", "resin-wall-grove"),
+              () => useToolAndAdvance(playerId, "grinder-relic", "resin-wall-grove"),
               "Seed Man used the Grinder Relic on the brittle resin wall."
             );
           } else if (Phaser.Math.Distance.Between(x, y, 365, 350) < 56) {
@@ -160,11 +173,11 @@ export default function GrowersGroveGame() {
           }
         }
 
-        private async runAction(action: () => Promise<InteractionResponse>, fallbackMessage: string) {
+        private async runAction(action: () => Promise<{ result?: { message?: string }; message?: string }>, fallbackMessage: string) {
           this.actionLocked = true;
           try {
             const response = await action();
-            const nextMessage = response.result.message || fallbackMessage;
+            const nextMessage = response.result?.message || response.message || fallbackMessage;
             this.interactText.setText(nextMessage);
             setMessage(nextMessage);
           } catch (error) {
@@ -215,6 +228,43 @@ export default function GrowersGroveGame() {
   );
 }
 
+async function talkToGardenKeeper(playerId: string): Promise<QuestResponse> {
+  await api("/dialogue/garden-keeper-intro");
+  await api<QuestResponse>("/quests/start", {
+    method: "POST",
+    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall" })
+  });
+
+  const talkResult = await api<QuestResponse>("/quests/advance", {
+    method: "POST",
+    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "TALK", targetSlug: "garden-keeper-intro" })
+  });
+
+  const returnResult = await api<QuestResponse>("/quests/advance", {
+    method: "POST",
+    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "RETURN", targetSlug: "garden-keeper-intro" })
+  });
+
+  if (returnResult.message.includes("completed")) {
+    const claim = await api<QuestResponse>("/quests/claim", {
+      method: "POST",
+      body: JSON.stringify({ playerId, questSlug: "clear-resin-wall" })
+    });
+
+    try {
+      const recruit = await api<RecruitmentResponse>("/recruitment/recruit", {
+        method: "POST",
+        body: JSON.stringify({ playerId, recruitSlug: "recruit-skunk-scout" })
+      });
+      return { message: `${claim.message} ${recruit.message}` };
+    } catch {
+      return claim;
+    }
+  }
+
+  return returnResult.message.startsWith("Current quest step") ? returnResult : talkResult;
+}
+
 async function pickup(playerId: string, itemSlug: string, quantity: number): Promise<InteractionResponse> {
   return api<InteractionResponse>("/inventory/pickup", {
     method: "POST",
@@ -222,11 +272,29 @@ async function pickup(playerId: string, itemSlug: string, quantity: number): Pro
   });
 }
 
+async function pickupAndAdvance(playerId: string, itemSlug: string): Promise<QuestResponse> {
+  const item = await pickup(playerId, itemSlug, 1);
+  const quest = await api<QuestResponse>("/quests/advance", {
+    method: "POST",
+    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "PICKUP", targetSlug: itemSlug })
+  });
+  return { message: `${item.result.message} ${quest.message}` };
+}
+
 async function useTool(playerId: string, toolSlug: string, obstacleSlug: string): Promise<InteractionResponse> {
   return api<InteractionResponse>("/interactions/use-tool", {
     method: "POST",
     body: JSON.stringify({ playerId, toolSlug, obstacleSlug })
   });
+}
+
+async function useToolAndAdvance(playerId: string, toolSlug: string, obstacleSlug: string): Promise<QuestResponse> {
+  const action = await useTool(playerId, toolSlug, obstacleSlug);
+  const quest = await api<QuestResponse>("/quests/advance", {
+    method: "POST",
+    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "USE_TOOL", targetSlug: obstacleSlug })
+  });
+  return { message: `${action.result.message} ${quest.message}` };
 }
 
 function createGeneratedTextures(scene: Phaser.Scene) {
@@ -283,8 +351,8 @@ function drawObstacle(scene: Phaser.Scene, x: number, y: number, slug: string, l
   scene.add.text(x - 50, y - 40, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
 }
 
-function drawNpc(scene: Phaser.Scene, x: number, y: number, slug: string, label: string) {
-  scene.add.circle(x, y - 8, 18, 0x5d3a24, 1).setStrokeStyle(3, 0xf5c84b, 0.9);
+function drawNpc(scene: Phaser.Scene, x: number, y: number, slug: string, label: string, color: number) {
+  scene.add.circle(x, y - 8, 18, color, 1).setStrokeStyle(3, 0xf5c84b, 0.9);
   scene.add.rectangle(x, y + 18, 38, 38, 0x3d622f, 1).setStrokeStyle(2, 0xf4ffe8, 0.5);
   scene.add.text(x - 66, y + 48, label, { fontSize: "12px", color: "#f4ffe8" });
   scene.add.text(x - 50, y - 46, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
