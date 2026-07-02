@@ -9,7 +9,12 @@ import type {
   RecruitRequirement,
   RecruitmentResult
 } from "@thc/rpg-kernel";
+import { applyXp } from "@thc/shared";
 import { prisma } from "../prismaClient.js";
+
+function scaledMaxHp(baseHp: number, level: number): number {
+  return baseHp + Math.max(0, level - 1) * 10;
+}
 
 function toDialogueView(dialogue: {
   slug: string;
@@ -148,16 +153,18 @@ export async function advanceQuest(params: {
     include: { questTemplate: true }
   });
 
-  const questRow = existing ?? (await prisma.playerQuest.create({
-    data: {
-      playerId,
-      questTemplateId: questTemplate.id,
-      status: "ACTIVE",
-      currentStepIndex: 0,
-      completedStepIds: []
-    },
-    include: { questTemplate: true }
-  }));
+  const questRow =
+    existing ??
+    (await prisma.playerQuest.create({
+      data: {
+        playerId,
+        questTemplateId: questTemplate.id,
+        status: "ACTIVE",
+        currentStepIndex: 0,
+        completedStepIds: []
+      },
+      include: { questTemplate: true }
+    }));
 
   if (questRow.status === "CLAIMED") {
     return { quest: toPlayerQuestView(questRow), message: "Quest reward already claimed." };
@@ -253,6 +260,26 @@ export async function claimQuest(playerId: string, questSlug: string): Promise<{
       });
     }
 
+    if (rewards.xp && rewards.xp > 0) {
+      const activeSlots = await tx.partySlot.findMany({
+        where: { playerId },
+        include: { companion: { include: { template: true } } }
+      });
+
+      for (const slot of activeSlots) {
+        const progress = applyXp(slot.companion.level, slot.companion.xp, rewards.xp);
+        const nextMaxHp = scaledMaxHp(slot.companion.template.baseHp, progress.level);
+        await tx.playerCompanion.update({
+          where: { id: slot.companion.id },
+          data: {
+            level: progress.level,
+            xp: progress.xp,
+            currentHp: Math.min(slot.companion.currentHp ?? nextMaxHp, nextMaxHp)
+          }
+        });
+      }
+    }
+
     await tx.playerQuest.update({
       where: { id: row.id },
       data: { status: "CLAIMED" }
@@ -335,7 +362,8 @@ export async function recruitCompanion(playerId: string, recruitSlug: string): P
         playerId,
         templateId: recruitEvent.companionTemplate.id,
         level: 1,
-        xp: 0
+        xp: 0,
+        currentHp: scaledMaxHp(recruitEvent.companionTemplate.baseHp, 1)
       }
     });
 
