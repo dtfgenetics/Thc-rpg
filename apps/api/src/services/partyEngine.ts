@@ -153,6 +153,7 @@ async function normalizePartyPositions(playerId: string) {
 
 function toRosterView(
   companion: Awaited<ReturnType<typeof prisma.playerCompanion.findMany>>[number] & {
+    currentHp?: number | null;
     template: {
       slug: string;
       name: string;
@@ -182,6 +183,8 @@ function toRosterView(
   partyPosition: number | null
 ): CompanionRosterView {
   const levelBonus = Math.max(0, companion.level - 1);
+  const maxHp = companion.template.baseHp + levelBonus * 10;
+  const currentHp = Math.max(0, Math.min(maxHp, companion.currentHp ?? maxHp));
 
   return {
     id: companion.id,
@@ -193,9 +196,12 @@ function toRosterView(
     role: companion.template.role,
     level: companion.level,
     xp: companion.xp,
+    currentHp,
+    maxHp,
+    fainted: currentHp <= 0,
     awakeningName: companion.template.awakeningName,
     stats: {
-      hp: companion.template.baseHp + levelBonus * 10,
+      hp: maxHp,
       potency: companion.template.potency + levelBonus * 2,
       vigor: companion.template.vigor + levelBonus * 2,
       speed: companion.template.speed + levelBonus * 2,
