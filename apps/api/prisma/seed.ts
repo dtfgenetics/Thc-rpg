@@ -148,7 +148,7 @@ const companions = [
     name: "Skunk Scout",
     primaryType: "GAS",
     secondaryType: null,
-    role: "Enemy striker",
+    role: "Enemy striker / recruitable scout",
     baseHp: 84,
     potency: 18,
     vigor: 13,
@@ -237,6 +237,79 @@ const obstacles = [
   }
 ];
 
+const dialogues = [
+  {
+    slug: "garden-keeper-intro",
+    title: "Garden Keeper Briefing",
+    speakerName: "Garden Keeper Nugsworth",
+    regionSlug: "growers-grove",
+    nodesJson: [
+      {
+        id: "start",
+        speakerName: "Garden Keeper Nugsworth",
+        speakerKind: "NPC",
+        text: "Seed Man, the Grove is locking up. Brittle resin is blocking the trail, and the smoke path is hiding our way forward.",
+        choices: [{ label: "What do I need?", nextNodeId: "tools" }]
+      },
+      {
+        id: "tools",
+        speakerName: "Garden Keeper Nugsworth",
+        speakerKind: "NPC",
+        text: "Find the Grinder Relic, clear the Resin Wall, then come back. If the Grove accepts you, a wild Skunk Scout may join your crew.",
+        choices: [{ label: "Start quest", actionSlug: "start-quest:clear-resin-wall" }]
+      }
+    ]
+  },
+  {
+    slug: "rival-ashtray-challenge",
+    title: "Rival Grower Challenge",
+    speakerName: "Rival Grower Ashtray",
+    regionSlug: "growers-grove",
+    nodesJson: [
+      {
+        id: "start",
+        speakerName: "Rival Grower Ashtray",
+        speakerKind: "NPC",
+        text: "Seed Man, you cleared a wall and suddenly think you run the Grove? Bring those strain companions and prove it.",
+        choices: [{ label: "Battle", actionSlug: "start-battle:rival-grower-ashtray" }]
+      }
+    ]
+  }
+];
+
+const quests = [
+  {
+    slug: "clear-resin-wall",
+    name: "Clear the Resin Wall",
+    description: "Help Garden Keeper Nugsworth reopen the Grower’s Grove trail by finding the Grinder Relic and clearing the brittle resin wall.",
+    regionSlug: "growers-grove",
+    stepsJson: [
+      { id: "talk-nugsworth", label: "Talk to Garden Keeper Nugsworth", actionType: "TALK", targetSlug: "garden-keeper-intro" },
+      { id: "collect-grinder", label: "Pick up the Grinder Relic", actionType: "PICKUP", targetSlug: "grinder-relic" },
+      { id: "clear-wall", label: "Use Grinder Relic on Brittle Resin Wall", actionType: "USE_TOOL", targetSlug: "resin-wall-grove" },
+      { id: "return-nugsworth", label: "Return to Garden Keeper Nugsworth", actionType: "RETURN", targetSlug: "garden-keeper-intro" }
+    ],
+    rewardsJson: {
+      xp: 25,
+      kushCoin: 25,
+      reputation: 3,
+      unlockSlugs: ["quest:clear-resin-wall:claimed"],
+      recruitSlug: "recruit-skunk-scout"
+    }
+  }
+];
+
+const recruitEvents = [
+  {
+    slug: "recruit-skunk-scout",
+    companionTemplateSlug: "skunk-scout",
+    displayName: "Recruit Skunk Scout",
+    description: "After Seed Man proves himself in Grower’s Grove, a Skunk Scout agrees to join the party.",
+    requirementsJson: [{ type: "QUEST_CLAIMED", slug: "clear-resin-wall" }],
+    rewardText: "Skunk Scout joined Seed Man’s crew."
+  }
+];
+
 async function main() {
   for (const move of moves) {
     await prisma.moveTemplate.upsert({
@@ -308,7 +381,31 @@ async function main() {
     });
   }
 
-  console.log("Seeded THC: Pheno Quest vertical slice data, items, and map obstacles.");
+  for (const dialogue of dialogues) {
+    await prisma.dialogueTemplate.upsert({
+      where: { slug: dialogue.slug },
+      update: dialogue,
+      create: dialogue
+    });
+  }
+
+  for (const quest of quests) {
+    await prisma.questTemplate.upsert({
+      where: { slug: quest.slug },
+      update: quest,
+      create: quest
+    });
+  }
+
+  for (const recruitEvent of recruitEvents) {
+    await prisma.recruitEvent.upsert({
+      where: { slug: recruitEvent.slug },
+      update: recruitEvent,
+      create: recruitEvent
+    });
+  }
+
+  console.log("Seeded THC: Pheno Quest data, Grower's Grove quest, dialogue, and recruitment.");
 }
 
 main()
