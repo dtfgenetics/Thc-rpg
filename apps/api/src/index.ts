@@ -11,6 +11,7 @@ import {
   resolvePlayerTurn,
   startBattle
 } from "./services/battleEngine.js";
+import { getPlayerInventory, grantItem, useConsumable, useToolOnObstacle } from "./services/inventoryEngine.js";
 
 dotenv.config();
 
@@ -41,6 +42,59 @@ app.get("/players/:playerId", async (request, response, next) => {
   try {
     const player = await getPlayerSummary(request.params.playerId);
     response.json(player);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/inventory/:playerId", async (request, response, next) => {
+  try {
+    const inventory = await getPlayerInventory(request.params.playerId);
+    response.json(inventory);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/inventory/pickup", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      itemSlug: z.string().min(1),
+      quantity: z.number().int().min(1).max(99).optional()
+    });
+    const body = schema.parse(request.body);
+    const result = await grantItem(body.playerId, body.itemSlug, body.quantity ?? 1);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/inventory/use", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      itemSlug: z.string().min(1)
+    });
+    const body = schema.parse(request.body);
+    const result = await useConsumable(body.playerId, body.itemSlug);
+    response.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/interactions/use-tool", async (request, response, next) => {
+  try {
+    const schema = z.object({
+      playerId: z.string().min(1),
+      obstacleSlug: z.string().min(1),
+      toolSlug: z.string().min(1)
+    });
+    const body = schema.parse(request.body);
+    const result = await useToolOnObstacle(body.playerId, body.obstacleSlug, body.toolSlug);
+    response.json(result);
   } catch (error) {
     next(error);
   }
