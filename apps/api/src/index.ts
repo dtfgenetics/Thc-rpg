@@ -12,6 +12,7 @@ import {
   startBattle
 } from "./services/battleEngine.js";
 import { getPlayerInventory, grantItem, useConsumable, useToolOnObstacle } from "./services/inventoryEngine.js";
+import { getRegionMapState } from "./services/mapStateEngine.js";
 import { addCompanionToParty, getPartyState, removeCompanionFromParty, swapPartyPositions } from "./services/partyEngine.js";
 import {
   advanceQuest,
@@ -53,6 +54,15 @@ app.get("/players/:playerId", async (request, response, next) => {
   try {
     const player = await getPlayerSummary(request.params.playerId);
     response.json(player);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/regions/:regionSlug/state/:playerId", async (request, response, next) => {
+  try {
+    const state = await getRegionMapState(request.params.playerId, request.params.regionSlug);
+    response.json(state);
   } catch (error) {
     next(error);
   }
