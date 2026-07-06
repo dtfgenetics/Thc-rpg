@@ -66,31 +66,39 @@ export async function grantItem(playerId: string, itemSlug: string, quantity = 1
   const safeQuantity = Math.max(1, Math.floor(quantity));
   const quantityToAdd = item.stackable ? safeQuantity : 1;
 
-  const existing = await prisma.playerInventoryItem.findUnique({
-    where: {
-      playerId_itemId: {
-        playerId,
-        itemId: item.id
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.playerInventoryItem.findUnique({
+      where: {
+        playerId_itemId: {
+          playerId,
+          itemId: item.id
+        }
       }
-    }
-  });
+    });
 
-  if (existing) {
-    await prisma.playerInventoryItem.update({
-      where: { id: existing.id },
-      data: {
-        quantity: item.stackable ? { increment: quantityToAdd } : 1
-      }
+    if (existing) {
+      await tx.playerInventoryItem.update({
+        where: { id: existing.id },
+        data: {
+          quantity: item.stackable ? { increment: quantityToAdd } : 1
+        }
+      });
+    } else {
+      await tx.playerInventoryItem.create({
+        data: {
+          playerId,
+          itemId: item.id,
+          quantity: quantityToAdd
+        }
+      });
+    }
+
+    await tx.playerUnlock.upsert({
+      where: { playerId_slug: { playerId, slug: `pickup:${item.slug}` } },
+      update: { source: "pickup" },
+      create: { playerId, slug: `pickup:${item.slug}`, source: "pickup" }
     });
-  } else {
-    await prisma.playerInventoryItem.create({
-      data: {
-        playerId,
-        itemId: item.id,
-        quantity: quantityToAdd
-      }
-    });
-  }
+  });
 
   const state = await getPlayerInventory(playerId);
   return {
