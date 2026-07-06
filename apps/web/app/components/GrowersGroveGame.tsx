@@ -42,6 +42,7 @@ type SavePointResponse = {
 };
 
 type PhaserSceneLike = any;
+type RegisteredGameObject = { destroy?: () => void };
 
 type ProximityTarget = {
   slug: string;
@@ -159,6 +160,7 @@ export default function GrowersGroveGame() {
         private actionLocked = false;
         private speed = 170;
         private lastHint = "Seed Man is ready. Start with Garden Keeper Nugsworth, then use the Cure Station before battling.";
+        private objectRegistry = new Map<string, RegisteredGameObject[]>();
 
         constructor() {
           super("GrowersGroveScene");
@@ -179,11 +181,11 @@ export default function GrowersGroveGame() {
 
           drawGroveFloor(this);
           drawNpc(this, 126, 350, "garden-keeper-intro", "Garden Keeper Nugsworth", 0x6da94d);
-          if (isRegionItemVisible("terp-tonic")) drawActionObject(this, 170, 180, "terp-tonic", "Terp Tonic", 0xf5c84b);
-          if (isRegionItemVisible("grinder-relic")) drawActionObject(this, 600, 175, "grinder-relic", "Grinder Relic", 0xb88746);
-          if (isRegionItemVisible("vapor-lens")) drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff);
-          if (isRegionObstacleVisible("resin-wall-grove")) drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31);
-          if (isRegionObstacleVisible("smoke-path-grove")) drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff);
+          if (isRegionItemVisible("terp-tonic")) this.registerObjects("terp-tonic", drawActionObject(this, 170, 180, "terp-tonic", "Terp Tonic", 0xf5c84b));
+          if (isRegionItemVisible("grinder-relic")) this.registerObjects("grinder-relic", drawActionObject(this, 600, 175, "grinder-relic", "Grinder Relic", 0xb88746));
+          if (isRegionItemVisible("vapor-lens")) this.registerObjects("vapor-lens", drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff));
+          if (isRegionObstacleVisible("resin-wall-grove")) this.registerObjects("resin-wall-grove", drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31));
+          if (isRegionObstacleVisible("smoke-path-grove")) this.registerObjects("smoke-path-grove", drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff));
           drawSavePoint(this, 430, 260, "growers-grove-cure-station", "Cure Station");
           drawNpc(this, 665, 260, "rival-grower-ashtray", "Rival Grower Ashtray", 0x5d3a24);
 
@@ -220,6 +222,21 @@ export default function GrowersGroveGame() {
           }
 
           void this.checkInteractions(Phaser);
+        }
+
+        private registerObjects(slug: string, objects: RegisteredGameObject[]) {
+          this.objectRegistry.set(slug, objects);
+        }
+
+        private syncObjectVisibility() {
+          for (const [slug, objects] of this.objectRegistry.entries()) {
+            if (!isTargetAvailable(slug)) {
+              for (const object of objects) {
+                object.destroy?.();
+              }
+              this.objectRegistry.delete(slug);
+            }
+          }
         }
 
         private getTargets(): ProximityTarget[] {
@@ -331,6 +348,7 @@ export default function GrowersGroveGame() {
           try {
             const response = await action();
             await refreshRegionMapState(playerId);
+            this.syncObjectVisibility();
             const nextMessage = response.result?.message || response.message || fallbackMessage;
             this.lastHint = nextMessage;
             this.interactText.setText(nextMessage);
@@ -507,17 +525,19 @@ function drawGroveFloor(scene: PhaserSceneLike) {
   scene.add.text(302, 247, "Grove Trail", { fontSize: "14px", color: "#bad1b1" });
 }
 
-function drawActionObject(scene: PhaserSceneLike, x: number, y: number, slug: string, label: string, color: number) {
-  scene.add.circle(x, y, 21, color, 0.9).setStrokeStyle(3, 0xffffff, 0.35);
-  scene.add.image(x, y, "pickup-glow").setAlpha(0.25);
-  scene.add.text(x - 48, y + 28, label, { fontSize: "12px", color: "#f4ffe8" });
-  scene.add.text(x - 40, y - 42, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
+function drawActionObject(scene: PhaserSceneLike, x: number, y: number, slug: string, label: string, color: number): RegisteredGameObject[] {
+  const body = scene.add.circle(x, y, 21, color, 0.9).setStrokeStyle(3, 0xffffff, 0.35);
+  const glow = scene.add.image(x, y, "pickup-glow").setAlpha(0.25);
+  const labelText = scene.add.text(x - 48, y + 28, label, { fontSize: "12px", color: "#f4ffe8" });
+  const slugText = scene.add.text(x - 40, y - 42, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
+  return [body, glow, labelText, slugText];
 }
 
-function drawObstacle(scene: PhaserSceneLike, x: number, y: number, slug: string, label: string, color: number) {
-  scene.add.rectangle(x, y, 92, 38, color, 0.85).setStrokeStyle(3, 0x331b07, 0.8);
-  scene.add.text(x - 56, y + 28, label, { fontSize: "12px", color: "#f4ffe8" });
-  scene.add.text(x - 50, y - 40, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
+function drawObstacle(scene: PhaserSceneLike, x: number, y: number, slug: string, label: string, color: number): RegisteredGameObject[] {
+  const body = scene.add.rectangle(x, y, 92, 38, color, 0.85).setStrokeStyle(3, 0x331b07, 0.8);
+  const labelText = scene.add.text(x - 56, y + 28, label, { fontSize: "12px", color: "#f4ffe8" });
+  const slugText = scene.add.text(x - 50, y - 40, slug, { fontSize: "9px", color: "#bad1b1" }).setAlpha(0.65);
+  return [body, labelText, slugText];
 }
 
 function drawSavePoint(scene: PhaserSceneLike, x: number, y: number, slug: string, label: string) {
