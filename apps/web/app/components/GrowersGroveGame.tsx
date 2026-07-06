@@ -2,11 +2,15 @@
 
 import type { RegionMapStateView } from "@thc/rpg-kernel";
 import { useEffect, useRef, useState } from "react";
+import {
+  GROWERS_GROVE_REGION_SLUG,
+  growersGroveEntities,
+  type GroveEntityDefinition
+} from "../games/pheno-quest/grove/growersGroveManifest";
 import { GameTouchControls, type MobileDirection, type MobileInputState } from "./GameTouchControls";
 import { createEmptyMobileInputState, getMovementVector } from "./gameInput";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const REGION_SLUG = "growers-grove";
 
 type PlayerSummary = {
   id: string;
@@ -44,12 +48,7 @@ type SavePointResponse = {
 type PhaserSceneLike = any;
 type RegisteredGameObject = { destroy?: () => void };
 
-type ProximityTarget = {
-  slug: string;
-  x: number;
-  y: number;
-  radius: number;
-  hint: string;
+type ProximityTarget = GroveEntityDefinition & {
   action: (playerId: string) => Promise<{ result?: { message?: string }; message?: string }>;
 };
 
@@ -93,7 +92,7 @@ export default function GrowersGroveGame() {
   }
 
   async function refreshRegionMapState(playerId: string) {
-    const state = await api<RegionMapStateView>(`/regions/${REGION_SLUG}/state/${playerId}`);
+    const state = await api<RegionMapStateView>(`/regions/${GROWERS_GROVE_REGION_SLUG}/state/${playerId}`);
     mapStateRef.current = state;
     return state;
   }
@@ -106,16 +105,15 @@ export default function GrowersGroveGame() {
     return mapStateRef.current?.obstacles.find((obstacle) => obstacle.slug === slug)?.visible ?? true;
   }
 
-  function isTargetAvailable(slug: string) {
-    if (["terp-tonic", "grinder-relic", "vapor-lens"].includes(slug)) {
-      return isRegionItemVisible(slug);
-    }
-
-    if (["resin-wall-grove", "smoke-path-grove"].includes(slug)) {
-      return isRegionObstacleVisible(slug);
-    }
-
+  function isEntityVisible(entity: GroveEntityDefinition) {
+    if (entity.kind === "ITEM") return isRegionItemVisible(entity.slug);
+    if (entity.kind === "OBSTACLE") return isRegionObstacleVisible(entity.slug);
     return true;
+  }
+
+  function isTargetAvailable(slug: string) {
+    const entity = growersGroveEntities.find((candidate) => candidate.slug === slug);
+    return entity ? isEntityVisible(entity) : true;
   }
 
   async function requestFullscreen() {
@@ -180,14 +178,13 @@ export default function GrowersGroveGame() {
           });
 
           drawGroveFloor(this);
-          drawNpc(this, 126, 350, "garden-keeper-intro", "Garden Keeper Nugsworth", 0x6da94d);
-          if (isRegionItemVisible("terp-tonic")) this.registerObjects("terp-tonic", drawActionObject(this, 170, 180, "terp-tonic", "Terp Tonic", 0xf5c84b));
-          if (isRegionItemVisible("grinder-relic")) this.registerObjects("grinder-relic", drawActionObject(this, 600, 175, "grinder-relic", "Grinder Relic", 0xb88746));
-          if (isRegionItemVisible("vapor-lens")) this.registerObjects("vapor-lens", drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff));
-          if (isRegionObstacleVisible("resin-wall-grove")) this.registerObjects("resin-wall-grove", drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31));
-          if (isRegionObstacleVisible("smoke-path-grove")) this.registerObjects("smoke-path-grove", drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff));
-          drawSavePoint(this, 430, 260, "growers-grove-cure-station", "Cure Station");
-          drawNpc(this, 665, 260, "rival-grower-ashtray", "Rival Grower Ashtray", 0x5d3a24);
+          for (const entity of growersGroveEntities) {
+            if (!isEntityVisible(entity)) continue;
+            const objects = drawEntity(this, entity);
+            if (entity.kind === "ITEM" || entity.kind === "OBSTACLE") {
+              this.registerObjects(entity.slug, objects);
+            }
+          }
 
           this.seedMan = createSeedMan(this, 90, 260);
           this.cursors = this.input.keyboard!.createCursorKeys();
@@ -240,72 +237,9 @@ export default function GrowersGroveGame() {
         }
 
         private getTargets(): ProximityTarget[] {
-          return [
-            {
-              slug: "garden-keeper-intro",
-              x: 126,
-              y: 350,
-              radius: 54,
-              hint: "Press E/Space/Interact: Talk to Garden Keeper Nugsworth.",
-              action: (playerId) => talkToGardenKeeper(playerId)
-            },
-            {
-              slug: "terp-tonic",
-              x: 170,
-              y: 180,
-              radius: 36,
-              hint: "Press E/Space/Interact: Pick up Terp Tonic.",
-              action: (playerId) => pickup(playerId, "terp-tonic", 1)
-            },
-            {
-              slug: "grinder-relic",
-              x: 600,
-              y: 175,
-              radius: 38,
-              hint: "Press E/Space/Interact: Pick up Grinder Relic.",
-              action: (playerId) => pickupAndAdvance(playerId, "grinder-relic")
-            },
-            {
-              slug: "vapor-lens",
-              x: 612,
-              y: 340,
-              radius: 38,
-              hint: "Press E/Space/Interact: Pick up Vapor Lens.",
-              action: (playerId) => pickup(playerId, "vapor-lens", 1)
-            },
-            {
-              slug: "resin-wall-grove",
-              x: 365,
-              y: 160,
-              radius: 52,
-              hint: "Press E/Space/Interact: Use Grinder Relic on Resin Wall.",
-              action: (playerId) => useToolAndAdvance(playerId, "grinder-relic", "resin-wall-grove")
-            },
-            {
-              slug: "smoke-path-grove",
-              x: 365,
-              y: 350,
-              radius: 56,
-              hint: "Press E/Space/Interact: Use Vapor Lens on Smoke Path.",
-              action: (playerId) => useTool(playerId, "vapor-lens", "smoke-path-grove")
-            },
-            {
-              slug: "growers-grove-cure-station",
-              x: 430,
-              y: 260,
-              radius: 54,
-              hint: "Press E/Space/Interact: Rest at Grower’s Grove Cure Station.",
-              action: (playerId) => saveAtCureStation(playerId)
-            },
-            {
-              slug: "rival-grower-ashtray",
-              x: 665,
-              y: 260,
-              radius: 54,
-              hint: "Press E/Space/Interact: Challenge Rival Grower Ashtray.",
-              action: async () => ({ message: "Rival Grower Ashtray: Meet me on the battle screen, Seed Man." })
-            }
-          ].filter((target) => isTargetAvailable(target.slug));
+          return growersGroveEntities
+            .filter((entity) => isTargetAvailable(entity.slug))
+            .map((entity) => ({ ...entity, action: getEntityAction(entity.slug) }));
         }
 
         private async checkInteractions(phaser: typeof Phaser) {
@@ -408,6 +342,18 @@ export default function GrowersGroveGame() {
   );
 }
 
+function getEntityAction(slug: string): ProximityTarget["action"] {
+  if (slug === "garden-keeper-intro") return (playerId) => talkToGardenKeeper(playerId);
+  if (slug === "terp-tonic") return (playerId) => pickup(playerId, "terp-tonic", 1);
+  if (slug === "grinder-relic") return (playerId) => pickupAndAdvance(playerId, "grinder-relic");
+  if (slug === "vapor-lens") return (playerId) => pickup(playerId, "vapor-lens", 1);
+  if (slug === "resin-wall-grove") return (playerId) => useToolAndAdvance(playerId, "grinder-relic", "resin-wall-grove");
+  if (slug === "smoke-path-grove") return (playerId) => useTool(playerId, "vapor-lens", "smoke-path-grove");
+  if (slug === "growers-grove-cure-station") return (playerId) => saveAtCureStation(playerId);
+  if (slug === "rival-grower-ashtray") return async () => ({ message: "Rival Grower Ashtray: Meet me on the battle screen, Seed Man." });
+  return async () => ({ message: "Nothing happened." });
+}
+
 async function talkToGardenKeeper(playerId: string): Promise<QuestResponse> {
   await api("/dialogue/garden-keeper-intro");
   await api<QuestResponse>("/quests/start", {
@@ -482,6 +428,24 @@ async function saveAtCureStation(playerId: string): Promise<SavePointResponse> {
     method: "POST",
     body: JSON.stringify({ playerId, savePointSlug: "growers-grove-cure-station" })
   });
+}
+
+function drawEntity(scene: PhaserSceneLike, entity: GroveEntityDefinition): RegisteredGameObject[] {
+  if (entity.kind === "ITEM") {
+    return drawActionObject(scene, entity.x, entity.y, entity.slug, entity.label, entity.color ?? 0xf5c84b);
+  }
+
+  if (entity.kind === "OBSTACLE") {
+    return drawObstacle(scene, entity.x, entity.y, entity.slug, entity.label, entity.color ?? 0xcc8a31);
+  }
+
+  if (entity.kind === "SAVE_POINT") {
+    drawSavePoint(scene, entity.x, entity.y, entity.slug, entity.label);
+    return [];
+  }
+
+  drawNpc(scene, entity.x, entity.y, entity.slug, entity.label, entity.color ?? 0x6da94d);
+  return [];
 }
 
 function createGeneratedTextures(scene: PhaserSceneLike) {
