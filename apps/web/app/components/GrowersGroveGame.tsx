@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { GameTouchControls, type MobileDirection, type MobileInputState } from "./GameTouchControls";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -38,10 +39,6 @@ type SavePointResponse = {
 };
 
 type PhaserSceneLike = any;
-
-type MobileDirection = "up" | "down" | "left" | "right";
-
-type MobileInputState = Record<MobileDirection, boolean>;
 
 type ProximityTarget = {
   slug: string;
@@ -352,54 +349,13 @@ export default function GrowersGroveGame() {
         <strong>Seed Man:</strong> {playerHandle || "loading"} · {message}
       </div>
       <div className="grove-canvas" ref={mountRef} />
-      <div className="mobile-control-panel" aria-label="Touch controls for Seed Man">
-        <div className="mobile-dpad" onPointerLeave={stopAllMobileMovement} onPointerCancel={stopAllMobileMovement}>
-          <span />
-          <MobileControlButton label="Up" onPressChange={(pressed) => setMobileDirection("up", pressed)}>▲</MobileControlButton>
-          <span />
-          <MobileControlButton label="Left" onPressChange={(pressed) => setMobileDirection("left", pressed)}>◀</MobileControlButton>
-          <button className="mobile-control-button mobile-stop-button" type="button" onClick={stopAllMobileMovement}>•</button>
-          <MobileControlButton label="Right" onPressChange={(pressed) => setMobileDirection("right", pressed)}>▶</MobileControlButton>
-          <span />
-          <MobileControlButton label="Down" onPressChange={(pressed) => setMobileDirection("down", pressed)}>▼</MobileControlButton>
-          <span />
-        </div>
-        <div className="mobile-action-stack">
-          <button className="mobile-action-button" type="button" onClick={queueMobileInteract}>Interact</button>
-          <button className="mobile-secondary-button" type="button" onClick={() => void requestFullscreen()}>Fullscreen</button>
-        </div>
-      </div>
+      <GameTouchControls
+        onDirectionChange={setMobileDirection}
+        onStopMovement={stopAllMobileMovement}
+        onInteract={queueMobileInteract}
+        onFullscreen={() => void requestFullscreen()}
+      />
     </section>
-  );
-}
-
-function MobileControlButton({
-  children,
-  label,
-  onPressChange
-}: {
-  children: React.ReactNode;
-  label: string;
-  onPressChange: (pressed: boolean) => void;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="mobile-control-button"
-      type="button"
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        onPressChange(true);
-      }}
-      onPointerUp={(event) => {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-        onPressChange(false);
-      }}
-      onPointerCancel={() => onPressChange(false)}
-      onPointerLeave={() => onPressChange(false)}
-    >
-      {children}
-    </button>
   );
 }
 
