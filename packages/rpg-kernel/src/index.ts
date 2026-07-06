@@ -2,6 +2,7 @@ export * from "./dialogueTypes.js";
 export * from "./entityTypes.js";
 export * from "./itemTypes.js";
 export * from "./interactionTypes.js";
+export * from "./mapStateTypes.js";
 export * from "./partyTypes.js";
 export * from "./questTypes.js";
 export * from "./recruitmentTypes.js";
