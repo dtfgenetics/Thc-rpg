@@ -39,6 +39,10 @@ type SavePointResponse = {
 
 type PhaserSceneLike = any;
 
+type MobileDirection = "up" | "down" | "left" | "right";
+
+type MobileInputState = Record<MobileDirection, boolean>;
+
 type ProximityTarget = {
   slug: string;
   x: number;
@@ -69,8 +73,37 @@ export default function GrowersGroveGame() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<{ destroy?: (removeCanvas?: boolean) => void } | null>(null);
   const playerIdRef = useRef<string | null>(null);
+  const mobileInputRef = useRef<MobileInputState>({ up: false, down: false, left: false, right: false });
+  const mobileInteractRef = useRef(false);
   const [message, setMessage] = useState("Loading Seed Man into Grower’s Grove...");
   const [playerHandle, setPlayerHandle] = useState<string>("");
+
+  function setMobileDirection(direction: MobileDirection, pressed: boolean) {
+    mobileInputRef.current = { ...mobileInputRef.current, [direction]: pressed };
+  }
+
+  function stopAllMobileMovement() {
+    mobileInputRef.current = { up: false, down: false, left: false, right: false };
+  }
+
+  function queueMobileInteract() {
+    mobileInteractRef.current = true;
+  }
+
+  async function requestFullscreen() {
+    const target = mountRef.current;
+    if (!target?.requestFullscreen) {
+      setMessage("Fullscreen is not available in this browser.");
+      return;
+    }
+
+    try {
+      await target.requestFullscreen();
+      setMessage("Grower’s Grove fullscreen enabled.");
+    } catch {
+      setMessage("Fullscreen request was blocked by the browser.");
+    }
+  }
 
   useEffect(() => {
     let destroyed = false;
@@ -86,7 +119,7 @@ export default function GrowersGroveGame() {
 
       playerIdRef.current = devPlayer.id;
       setPlayerHandle(devPlayer.handle);
-      setMessage("Move Seed Man with arrows/WASD. Stand near an object and press E or Space to interact.");
+      setMessage("Move Seed Man with arrows/WASD or touch controls. Press E, Space, or Interact near objects.");
 
       class GrowersGroveScene extends Phaser.Scene {
         private seedMan!: any;
@@ -142,13 +175,14 @@ export default function GrowersGroveGame() {
 
         update(_time: number, delta: number) {
           const dt = delta / 1000;
+          const mobileInput = mobileInputRef.current;
           let vx = 0;
           let vy = 0;
 
-          if (this.cursors.left?.isDown || this.wasd.A.isDown) vx -= 1;
-          if (this.cursors.right?.isDown || this.wasd.D.isDown) vx += 1;
-          if (this.cursors.up?.isDown || this.wasd.W.isDown) vy -= 1;
-          if (this.cursors.down?.isDown || this.wasd.S.isDown) vy += 1;
+          if (this.cursors.left?.isDown || this.wasd.A.isDown || mobileInput.left) vx -= 1;
+          if (this.cursors.right?.isDown || this.wasd.D.isDown || mobileInput.right) vx += 1;
+          if (this.cursors.up?.isDown || this.wasd.W.isDown || mobileInput.up) vy -= 1;
+          if (this.cursors.down?.isDown || this.wasd.S.isDown || mobileInput.down) vy += 1;
 
           if (vx !== 0 || vy !== 0) {
             const length = Math.sqrt(vx * vx + vy * vy);
@@ -168,7 +202,7 @@ export default function GrowersGroveGame() {
               x: 126,
               y: 350,
               radius: 54,
-              hint: "Press E/Space: Talk to Garden Keeper Nugsworth.",
+              hint: "Press E/Space/Interact: Talk to Garden Keeper Nugsworth.",
               action: (playerId) => talkToGardenKeeper(playerId)
             },
             {
@@ -176,7 +210,7 @@ export default function GrowersGroveGame() {
               x: 170,
               y: 180,
               radius: 36,
-              hint: "Press E/Space: Pick up Terp Tonic.",
+              hint: "Press E/Space/Interact: Pick up Terp Tonic.",
               action: (playerId) => pickup(playerId, "terp-tonic", 1)
             },
             {
@@ -184,7 +218,7 @@ export default function GrowersGroveGame() {
               x: 600,
               y: 175,
               radius: 38,
-              hint: "Press E/Space: Pick up Grinder Relic.",
+              hint: "Press E/Space/Interact: Pick up Grinder Relic.",
               action: (playerId) => pickupAndAdvance(playerId, "grinder-relic")
             },
             {
@@ -192,7 +226,7 @@ export default function GrowersGroveGame() {
               x: 612,
               y: 340,
               radius: 38,
-              hint: "Press E/Space: Pick up Vapor Lens.",
+              hint: "Press E/Space/Interact: Pick up Vapor Lens.",
               action: (playerId) => pickup(playerId, "vapor-lens", 1)
             },
             {
@@ -200,7 +234,7 @@ export default function GrowersGroveGame() {
               x: 365,
               y: 160,
               radius: 52,
-              hint: "Press E/Space: Use Grinder Relic on Resin Wall.",
+              hint: "Press E/Space/Interact: Use Grinder Relic on Resin Wall.",
               action: (playerId) => useToolAndAdvance(playerId, "grinder-relic", "resin-wall-grove")
             },
             {
@@ -208,7 +242,7 @@ export default function GrowersGroveGame() {
               x: 365,
               y: 350,
               radius: 56,
-              hint: "Press E/Space: Use Vapor Lens on Smoke Path.",
+              hint: "Press E/Space/Interact: Use Vapor Lens on Smoke Path.",
               action: (playerId) => useTool(playerId, "vapor-lens", "smoke-path-grove")
             },
             {
@@ -216,7 +250,7 @@ export default function GrowersGroveGame() {
               x: 430,
               y: 260,
               radius: 54,
-              hint: "Press E/Space: Rest at Grower’s Grove Cure Station.",
+              hint: "Press E/Space/Interact: Rest at Grower’s Grove Cure Station.",
               action: (playerId) => saveAtCureStation(playerId)
             },
             {
@@ -224,7 +258,7 @@ export default function GrowersGroveGame() {
               x: 665,
               y: 260,
               radius: 54,
-              hint: "Press E/Space: Challenge Rival Grower Ashtray.",
+              hint: "Press E/Space/Interact: Challenge Rival Grower Ashtray.",
               action: async () => ({ message: "Rival Grower Ashtray: Meet me on the battle screen, Seed Man." })
             }
           ];
@@ -241,10 +275,11 @@ export default function GrowersGroveGame() {
           );
 
           if (!nearby) {
-            if (this.lastHint !== "Move near an object and press E or Space to interact.") {
-              this.lastHint = "Move near an object and press E or Space to interact.";
+            if (this.lastHint !== "Move near an object and press E, Space, or Interact.") {
+              this.lastHint = "Move near an object and press E, Space, or Interact.";
               this.interactText.setText(this.lastHint);
             }
+            mobileInteractRef.current = false;
             return;
           }
 
@@ -253,12 +288,14 @@ export default function GrowersGroveGame() {
             this.interactText.setText(nearby.hint);
           }
 
-          const pressedInteract =
+          const pressedMobileInteract = mobileInteractRef.current;
+          const pressedKeyboardInteract =
             phaser.Input.Keyboard.JustDown(this.interactKey) ||
             Boolean(this.cursors.space && phaser.Input.Keyboard.JustDown(this.cursors.space));
 
-          if (!pressedInteract) return;
+          if (!pressedMobileInteract && !pressedKeyboardInteract) return;
 
+          mobileInteractRef.current = false;
           await this.runAction(() => nearby.action(playerId), nearby.hint);
         }
 
@@ -303,6 +340,7 @@ export default function GrowersGroveGame() {
 
     return () => {
       destroyed = true;
+      stopAllMobileMovement();
       gameRef.current?.destroy?.(true);
       gameRef.current = null;
     };
@@ -314,7 +352,54 @@ export default function GrowersGroveGame() {
         <strong>Seed Man:</strong> {playerHandle || "loading"} · {message}
       </div>
       <div className="grove-canvas" ref={mountRef} />
+      <div className="mobile-control-panel" aria-label="Touch controls for Seed Man">
+        <div className="mobile-dpad" onPointerLeave={stopAllMobileMovement} onPointerCancel={stopAllMobileMovement}>
+          <span />
+          <MobileControlButton label="Up" onPressChange={(pressed) => setMobileDirection("up", pressed)}>▲</MobileControlButton>
+          <span />
+          <MobileControlButton label="Left" onPressChange={(pressed) => setMobileDirection("left", pressed)}>◀</MobileControlButton>
+          <button className="mobile-control-button mobile-stop-button" type="button" onClick={stopAllMobileMovement}>•</button>
+          <MobileControlButton label="Right" onPressChange={(pressed) => setMobileDirection("right", pressed)}>▶</MobileControlButton>
+          <span />
+          <MobileControlButton label="Down" onPressChange={(pressed) => setMobileDirection("down", pressed)}>▼</MobileControlButton>
+          <span />
+        </div>
+        <div className="mobile-action-stack">
+          <button className="mobile-action-button" type="button" onClick={queueMobileInteract}>Interact</button>
+          <button className="mobile-secondary-button" type="button" onClick={() => void requestFullscreen()}>Fullscreen</button>
+        </div>
+      </div>
     </section>
+  );
+}
+
+function MobileControlButton({
+  children,
+  label,
+  onPressChange
+}: {
+  children: React.ReactNode;
+  label: string;
+  onPressChange: (pressed: boolean) => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="mobile-control-button"
+      type="button"
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        onPressChange(true);
+      }}
+      onPointerUp={(event) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        onPressChange(false);
+      }}
+      onPointerCancel={() => onPressChange(false)}
+      onPointerLeave={() => onPressChange(false)}
+    >
+      {children}
+    </button>
   );
 }
 
