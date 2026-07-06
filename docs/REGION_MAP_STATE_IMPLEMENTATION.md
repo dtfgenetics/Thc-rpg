@@ -82,6 +82,18 @@ The map uses region state to decide whether to draw or allow interaction with:
 
 After an interaction runs, Grower’s Grove refreshes the region state so the next interaction check uses updated data.
 
+## Live Object Registry
+
+Grower’s Grove now keeps a Phaser object registry:
+
+```text
+objectSlug → Phaser GameObjects[]
+```
+
+When region state refreshes, the scene checks each registered object. If the server says the object is no longer visible, the scene destroys the registered Phaser objects and removes them from the registry.
+
+This means items and obstacles can disappear immediately after being collected or cleared.
+
 ## Current Behavior
 
 On reload:
@@ -94,24 +106,33 @@ Cure Station remains available.
 NPCs remain available.
 ```
 
+During live play:
+
+```text
+Collected items are destroyed after pickup.
+Cleared obstacles are destroyed after tool use.
+Destroyed objects are removed from future interaction targeting.
+```
+
 ## Known Limitation
 
-In this first version, objects drawn before an action may remain visible until reload because the scene does not yet destroy already-created game objects after a state refresh.
-
-However, interaction targeting updates immediately after state refresh, so the player should not be able to re-use collected/cleared objects.
+This is still a first-pass object registry. It handles static pickups and obstacles, but it does not yet animate disappear effects, play pickup sounds, or support respawning timed resources.
 
 ## Next Upgrade
 
-Add Phaser object registry/destruction:
+Add a region entity manifest so object positions and draw behavior do not live directly inside `GrowersGroveGame.tsx`.
+
+Suggested file:
 
 ```text
-objectSlug → Phaser GameObjects
+apps/web/app/games/pheno-quest/grove/growersGroveManifest.ts
 ```
 
-Then, after region state refresh:
+That manifest should define:
 
-```text
-if object.visible === false → destroy its Phaser objects
-```
-
-This will make the map visually update immediately without requiring a reload.
+- item positions
+- obstacle positions
+- NPC positions
+- save point positions
+- battle trigger positions
+- region exits
