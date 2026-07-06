@@ -1,10 +1,12 @@
 "use client";
 
+import type { RegionMapStateView } from "@thc/rpg-kernel";
 import { useEffect, useRef, useState } from "react";
 import { GameTouchControls, type MobileDirection, type MobileInputState } from "./GameTouchControls";
 import { createEmptyMobileInputState, getMovementVector } from "./gameInput";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const REGION_SLUG = "growers-grove";
 
 type PlayerSummary = {
   id: string;
@@ -71,6 +73,7 @@ export default function GrowersGroveGame() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<{ destroy?: (removeCanvas?: boolean) => void } | null>(null);
   const playerIdRef = useRef<string | null>(null);
+  const mapStateRef = useRef<RegionMapStateView | null>(null);
   const mobileInputRef = useRef<MobileInputState>(createEmptyMobileInputState());
   const mobileInteractRef = useRef(false);
   const [message, setMessage] = useState("Loading Seed Man into Grower’s Grove...");
@@ -86,6 +89,32 @@ export default function GrowersGroveGame() {
 
   function queueMobileInteract() {
     mobileInteractRef.current = true;
+  }
+
+  async function refreshRegionMapState(playerId: string) {
+    const state = await api<RegionMapStateView>(`/regions/${REGION_SLUG}/state/${playerId}`);
+    mapStateRef.current = state;
+    return state;
+  }
+
+  function isRegionItemVisible(slug: string) {
+    return mapStateRef.current?.items.find((item) => item.slug === slug)?.visible ?? true;
+  }
+
+  function isRegionObstacleVisible(slug: string) {
+    return mapStateRef.current?.obstacles.find((obstacle) => obstacle.slug === slug)?.visible ?? true;
+  }
+
+  function isTargetAvailable(slug: string) {
+    if (["terp-tonic", "grinder-relic", "vapor-lens"].includes(slug)) {
+      return isRegionItemVisible(slug);
+    }
+
+    if (["resin-wall-grove", "smoke-path-grove"].includes(slug)) {
+      return isRegionObstacleVisible(slug);
+    }
+
+    return true;
   }
 
   async function requestFullscreen() {
@@ -114,6 +143,8 @@ export default function GrowersGroveGame() {
         method: "POST",
         body: JSON.stringify({ handle: "DTF Demo Grower" })
       });
+
+      await refreshRegionMapState(devPlayer.id);
 
       playerIdRef.current = devPlayer.id;
       setPlayerHandle(devPlayer.handle);
@@ -148,11 +179,11 @@ export default function GrowersGroveGame() {
 
           drawGroveFloor(this);
           drawNpc(this, 126, 350, "garden-keeper-intro", "Garden Keeper Nugsworth", 0x6da94d);
-          drawActionObject(this, 170, 180, "terp-tonic", "Terp Tonic", 0xf5c84b);
-          drawActionObject(this, 600, 175, "grinder-relic", "Grinder Relic", 0xb88746);
-          drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff);
-          drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31);
-          drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff);
+          if (isRegionItemVisible("terp-tonic")) drawActionObject(this, 170, 180, "terp-tonic", "Terp Tonic", 0xf5c84b);
+          if (isRegionItemVisible("grinder-relic")) drawActionObject(this, 600, 175, "grinder-relic", "Grinder Relic", 0xb88746);
+          if (isRegionItemVisible("vapor-lens")) drawActionObject(this, 612, 340, "vapor-lens", "Vapor Lens", 0x8fd7ff);
+          if (isRegionObstacleVisible("resin-wall-grove")) drawObstacle(this, 365, 160, "resin-wall-grove", "Brittle Resin Wall", 0xcc8a31);
+          if (isRegionObstacleVisible("smoke-path-grove")) drawObstacle(this, 365, 350, "smoke-path-grove", "Hidden Smoke Path", 0xdad7ff);
           drawSavePoint(this, 430, 260, "growers-grove-cure-station", "Cure Station");
           drawNpc(this, 665, 260, "rival-grower-ashtray", "Rival Grower Ashtray", 0x5d3a24);
 
@@ -257,7 +288,7 @@ export default function GrowersGroveGame() {
               hint: "Press E/Space/Interact: Challenge Rival Grower Ashtray.",
               action: async () => ({ message: "Rival Grower Ashtray: Meet me on the battle screen, Seed Man." })
             }
-          ];
+          ].filter((target) => isTargetAvailable(target.slug));
         }
 
         private async checkInteractions(phaser: typeof Phaser) {
@@ -292,13 +323,14 @@ export default function GrowersGroveGame() {
           if (!pressedMobileInteract && !pressedKeyboardInteract) return;
 
           mobileInteractRef.current = false;
-          await this.runAction(() => nearby.action(playerId), nearby.hint);
+          await this.runAction(() => nearby.action(playerId), nearby.hint, playerId);
         }
 
-        private async runAction(action: () => Promise<{ result?: { message?: string }; message?: string }>, fallbackMessage: string) {
+        private async runAction(action: () => Promise<{ result?: { message?: string }; message?: string }>, fallbackMessage: string, playerId: string) {
           this.actionLocked = true;
           try {
             const response = await action();
+            await refreshRegionMapState(playerId);
             const nextMessage = response.result?.message || response.message || fallbackMessage;
             this.lastHint = nextMessage;
             this.interactText.setText(nextMessage);
