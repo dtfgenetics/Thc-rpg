@@ -52,12 +52,15 @@ export async function getRegionMapState(playerId: string, regionSlug: string): P
   return {
     playerId,
     regionSlug,
-    items: items.map((item) => ({
-      slug: item.slug,
-      name: item.name,
-      owned: ownedItemSlugs.has(item.slug),
-      visible: !ownedItemSlugs.has(item.slug)
-    })),
+    items: items.map((item) => {
+      const collected = unlockSet.has(`pickup:${item.slug}`);
+      return {
+        slug: item.slug,
+        name: item.name,
+        owned: ownedItemSlugs.has(item.slug),
+        visible: !collected
+      };
+    }),
     obstacles: obstacles.map((obstacle) => {
       const cleared = unlockSet.has(obstacle.clearedUnlockSlug);
       return {
