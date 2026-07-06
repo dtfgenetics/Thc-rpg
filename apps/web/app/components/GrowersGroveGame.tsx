@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GameTouchControls, type MobileDirection, type MobileInputState } from "./GameTouchControls";
+import { createEmptyMobileInputState, getMovementVector } from "./gameInput";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -70,7 +71,7 @@ export default function GrowersGroveGame() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<{ destroy?: (removeCanvas?: boolean) => void } | null>(null);
   const playerIdRef = useRef<string | null>(null);
-  const mobileInputRef = useRef<MobileInputState>({ up: false, down: false, left: false, right: false });
+  const mobileInputRef = useRef<MobileInputState>(createEmptyMobileInputState());
   const mobileInteractRef = useRef(false);
   const [message, setMessage] = useState("Loading Seed Man into Grower’s Grove...");
   const [playerHandle, setPlayerHandle] = useState<string>("");
@@ -80,7 +81,7 @@ export default function GrowersGroveGame() {
   }
 
   function stopAllMobileMovement() {
-    mobileInputRef.current = { up: false, down: false, left: false, right: false };
+    mobileInputRef.current = createEmptyMobileInputState();
   }
 
   function queueMobileInteract() {
@@ -172,21 +173,19 @@ export default function GrowersGroveGame() {
 
         update(_time: number, delta: number) {
           const dt = delta / 1000;
-          const mobileInput = mobileInputRef.current;
-          let vx = 0;
-          let vy = 0;
+          const movement = getMovementVector({
+            keyboard: {
+              left: Boolean(this.cursors.left?.isDown || this.wasd.A.isDown),
+              right: Boolean(this.cursors.right?.isDown || this.wasd.D.isDown),
+              up: Boolean(this.cursors.up?.isDown || this.wasd.W.isDown),
+              down: Boolean(this.cursors.down?.isDown || this.wasd.S.isDown)
+            },
+            mobile: mobileInputRef.current
+          });
 
-          if (this.cursors.left?.isDown || this.wasd.A.isDown || mobileInput.left) vx -= 1;
-          if (this.cursors.right?.isDown || this.wasd.D.isDown || mobileInput.right) vx += 1;
-          if (this.cursors.up?.isDown || this.wasd.W.isDown || mobileInput.up) vy -= 1;
-          if (this.cursors.down?.isDown || this.wasd.S.isDown || mobileInput.down) vy += 1;
-
-          if (vx !== 0 || vy !== 0) {
-            const length = Math.sqrt(vx * vx + vy * vy);
-            vx /= length;
-            vy /= length;
-            this.seedMan.x = Phaser.Math.Clamp(this.seedMan.x + vx * this.speed * dt, 58, 742);
-            this.seedMan.y = Phaser.Math.Clamp(this.seedMan.y + vy * this.speed * dt, 110, 410);
+          if (movement.x !== 0 || movement.y !== 0) {
+            this.seedMan.x = Phaser.Math.Clamp(this.seedMan.x + movement.x * this.speed * dt, 58, 742);
+            this.seedMan.y = Phaser.Math.Clamp(this.seedMan.y + movement.y * this.speed * dt, 110, 410);
           }
 
           void this.checkInteractions(Phaser);
