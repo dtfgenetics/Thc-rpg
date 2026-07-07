@@ -3,71 +3,29 @@
 import type { RegionMapStateView } from "@thc/rpg-kernel";
 import { useEffect, useRef, useState } from "react";
 import {
+  getGrowersGroveAction,
+  type GroveEntityAction
+} from "../games/pheno-quest/grove/growersGroveActions";
+import {
   GROWERS_GROVE_REGION_SLUG,
   growersGroveEntities,
   type GroveEntityDefinition
 } from "../games/pheno-quest/grove/growersGroveManifest";
 import { GameTouchControls, type MobileDirection, type MobileInputState } from "./GameTouchControls";
+import { gameApi } from "./gameApi";
 import { createEmptyMobileInputState, getMovementVector } from "./gameInput";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 type PlayerSummary = {
   id: string;
   handle: string;
 };
 
-type InteractionResponse = {
-  result: {
-    success: boolean;
-    message: string;
-    unlockedSlug?: string;
-    grantedItemSlug?: string;
-  };
-};
-
-type QuestResponse = {
-  quest?: unknown;
-  message: string;
-};
-
-type RecruitmentResponse = {
-  success: boolean;
-  message: string;
-};
-
-type SavePointResponse = {
-  success: boolean;
-  message: string;
-  saveState: {
-    lastSavePointSlug?: string | null;
-    lastSavedAt?: string | null;
-  };
-};
-
 type PhaserSceneLike = any;
 type RegisteredGameObject = { destroy?: () => void };
 
 type ProximityTarget = GroveEntityDefinition & {
-  action: (playerId: string) => Promise<{ result?: { message?: string }; message?: string }>;
+  action: GroveEntityAction;
 };
-
-async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers ?? {})
-    }
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Unknown API error" }));
-    throw new Error(error.error || "API request failed");
-  }
-
-  return response.json() as Promise<T>;
-}
 
 export default function GrowersGroveGame() {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -92,7 +50,7 @@ export default function GrowersGroveGame() {
   }
 
   async function refreshRegionMapState(playerId: string) {
-    const state = await api<RegionMapStateView>(`/regions/${GROWERS_GROVE_REGION_SLUG}/state/${playerId}`);
+    const state = await gameApi<RegionMapStateView>(`/regions/${GROWERS_GROVE_REGION_SLUG}/state/${playerId}`);
     mapStateRef.current = state;
     return state;
   }
@@ -138,7 +96,7 @@ export default function GrowersGroveGame() {
       const Phaser = await import("phaser");
       if (destroyed || !mountRef.current || gameRef.current) return;
 
-      const devPlayer = await api<PlayerSummary>("/dev/player", {
+      const devPlayer = await gameApi<PlayerSummary>("/dev/player", {
         method: "POST",
         body: JSON.stringify({ handle: "DTF Demo Grower" })
       });
@@ -239,7 +197,7 @@ export default function GrowersGroveGame() {
         private getTargets(): ProximityTarget[] {
           return growersGroveEntities
             .filter((entity) => isTargetAvailable(entity.slug))
-            .map((entity) => ({ ...entity, action: getEntityAction(entity.slug) }));
+            .map((entity) => ({ ...entity, action: getGrowersGroveAction(entity.slug) }));
         }
 
         private async checkInteractions(phaser: typeof Phaser) {
@@ -277,7 +235,7 @@ export default function GrowersGroveGame() {
           await this.runAction(() => nearby.action(playerId), nearby.hint, playerId);
         }
 
-        private async runAction(action: () => Promise<{ result?: { message?: string }; message?: string }>, fallbackMessage: string, playerId: string) {
+        private async runAction(action: () => ReturnType<GroveEntityAction>, fallbackMessage: string, playerId: string) {
           this.actionLocked = true;
           try {
             const response = await action();
@@ -340,94 +298,6 @@ export default function GrowersGroveGame() {
       />
     </section>
   );
-}
-
-function getEntityAction(slug: string): ProximityTarget["action"] {
-  if (slug === "garden-keeper-intro") return (playerId) => talkToGardenKeeper(playerId);
-  if (slug === "terp-tonic") return (playerId) => pickup(playerId, "terp-tonic", 1);
-  if (slug === "grinder-relic") return (playerId) => pickupAndAdvance(playerId, "grinder-relic");
-  if (slug === "vapor-lens") return (playerId) => pickup(playerId, "vapor-lens", 1);
-  if (slug === "resin-wall-grove") return (playerId) => useToolAndAdvance(playerId, "grinder-relic", "resin-wall-grove");
-  if (slug === "smoke-path-grove") return (playerId) => useTool(playerId, "vapor-lens", "smoke-path-grove");
-  if (slug === "growers-grove-cure-station") return (playerId) => saveAtCureStation(playerId);
-  if (slug === "rival-grower-ashtray") return async () => ({ message: "Rival Grower Ashtray: Meet me on the battle screen, Seed Man." });
-  return async () => ({ message: "Nothing happened." });
-}
-
-async function talkToGardenKeeper(playerId: string): Promise<QuestResponse> {
-  await api("/dialogue/garden-keeper-intro");
-  await api<QuestResponse>("/quests/start", {
-    method: "POST",
-    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall" })
-  });
-
-  const talkResult = await api<QuestResponse>("/quests/advance", {
-    method: "POST",
-    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "TALK", targetSlug: "garden-keeper-intro" })
-  });
-
-  const returnResult = await api<QuestResponse>("/quests/advance", {
-    method: "POST",
-    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "RETURN", targetSlug: "garden-keeper-intro" })
-  });
-
-  if (returnResult.message.includes("completed")) {
-    const claim = await api<QuestResponse>("/quests/claim", {
-      method: "POST",
-      body: JSON.stringify({ playerId, questSlug: "clear-resin-wall" })
-    });
-
-    try {
-      const recruit = await api<RecruitmentResponse>("/recruitment/recruit", {
-        method: "POST",
-        body: JSON.stringify({ playerId, recruitSlug: "recruit-skunk-scout" })
-      });
-      return { message: `${claim.message} ${recruit.message}` };
-    } catch {
-      return claim;
-    }
-  }
-
-  return returnResult.message.startsWith("Current quest step") ? returnResult : talkResult;
-}
-
-async function pickup(playerId: string, itemSlug: string, quantity: number): Promise<InteractionResponse> {
-  return api<InteractionResponse>("/inventory/pickup", {
-    method: "POST",
-    body: JSON.stringify({ playerId, itemSlug, quantity })
-  });
-}
-
-async function pickupAndAdvance(playerId: string, itemSlug: string): Promise<QuestResponse> {
-  const item = await pickup(playerId, itemSlug, 1);
-  const quest = await api<QuestResponse>("/quests/advance", {
-    method: "POST",
-    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "PICKUP", targetSlug: itemSlug })
-  });
-  return { message: `${item.result.message} ${quest.message}` };
-}
-
-async function useTool(playerId: string, toolSlug: string, obstacleSlug: string): Promise<InteractionResponse> {
-  return api<InteractionResponse>("/interactions/use-tool", {
-    method: "POST",
-    body: JSON.stringify({ playerId, toolSlug, obstacleSlug })
-  });
-}
-
-async function useToolAndAdvance(playerId: string, toolSlug: string, obstacleSlug: string): Promise<QuestResponse> {
-  const action = await useTool(playerId, toolSlug, obstacleSlug);
-  const quest = await api<QuestResponse>("/quests/advance", {
-    method: "POST",
-    body: JSON.stringify({ playerId, questSlug: "clear-resin-wall", actionType: "USE_TOOL", targetSlug: obstacleSlug })
-  });
-  return { message: `${action.result.message} ${quest.message}` };
-}
-
-async function saveAtCureStation(playerId: string): Promise<SavePointResponse> {
-  return api<SavePointResponse>("/savepoints/use", {
-    method: "POST",
-    body: JSON.stringify({ playerId, savePointSlug: "growers-grove-cure-station" })
-  });
 }
 
 function drawEntity(scene: PhaserSceneLike, entity: GroveEntityDefinition): RegisteredGameObject[] {
