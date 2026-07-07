@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BattleStatus {
+  ACTIVE
+  WON
+  LOST
+}
+
+enum BattleSide {
+  PLAYER
+  ENEMY
+}
+
+enum MoveKind {
+  DAMAGE
+  SHIELD
+  DEBUFF
+}
+
+enum ItemKind {
+  CONSUMABLE
+  BATTLE_ITEM
+  KEY_TOOL
+  RELIC
+  GENETICS
+  QUEST
+  MATERIAL
+}
+
+enum QuestStatus {
+  ACTIVE
+  COMPLETED
+  CLAIMED
+}
+
+model Player {
+  id              String                 @id @default(cuid())
+  handle          String                 @unique
+  kushCoin        Int                    @default(0)
+  reputation      Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  companions      PlayerCompanion[]
+  partySlots      PartySlot[]
+  battles         Battle[]
+  inventory       PlayerInventoryItem[]
+  unlocks         PlayerUnlock[]
+  quests          PlayerQuest[]
+  recruitClaims   PlayerRecruitClaim[]
+  saveState       PlayerSaveState?
+  savePointVisits PlayerSavePointVisit[]
+}
+
+model CompanionTemplate {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  name           String
+  primaryType    String
+  secondaryType  String?
+  role           String
+  baseHp         Int
+  potency        Int
+  vigor          Int
+  speed          Int
+  resin          Int
+  terpenes       Int
+  stability      Int
+  awakeningName  String
+  starter        Boolean           @default(false)
+  moves          TemplateMove[]
+  playerCopies   PlayerCompanion[]
+  recruitEvents  RecruitEvent[]
+}
+
+model MoveTemplate {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  name            String
+  type            String
+  kind            MoveKind
+  basePower       Int
+  accuracy        Int            @default(100)
+  meterGain       Int            @default(10)
+  timingPattern   Json
+  goodBonusCap    Float          @default(0.15)
+  perfectBonusCap Float          @default(0.35)
+  statusEffect    String?
+  awakeningOnly   Boolean        @default(false)
+  cooldown        Int            @default(0)
+  templates       TemplateMove[]
+}
+
+model TemplateMove {
+  id                  String            @id @default(cuid())
+  companionTemplateId String
+  moveTemplateId      String
+  levelRequired       Int               @default(1)
+  companionTemplate   CompanionTemplate @relation(fields: [companionTemplateId], references: [id], onDelete: Cascade)
+  moveTemplate        MoveTemplate      @relation(fields: [moveTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([companionTemplateId, moveTemplateId])
+}
+
+model PlayerCompanion {
+  id         String            @id @default(cuid())
+  playerId   String
+  templateId String
+  nickname   String?
+  level      Int               @default(1)
+  xp         Int               @default(0)
+  currentHp  Int?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  player     Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  template   CompanionTemplate @relation(fields: [templateId], references: [id])
+  partySlots PartySlot[]
+}
+
+model PartySlot {
+  id          String          @id @default(cuid())
+  playerId    String
+  companionId String
+  position    Int
+  player      Player          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  companion   PlayerCompanion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, position])
+  @@unique([playerId, companionId])
+}
+
+model NpcTemplate {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  partyJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Battle {
+  id          String       @id @default(cuid())
+  playerId    String
+  npcSlug     String
+  status      BattleStatus @default(ACTIVE)
+  turnNumber  Int          @default(1)
+  activeSide  BattleSide   @default(PLAYER)
+  state       Json
+  log         Json
+  rewardsJson Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  player      Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model ItemTemplate {
+  id            String                @id @default(cuid())
+  slug          String                @unique
+  name          String
+  kind          ItemKind
+  description   String
+  stackable     Boolean               @default(true)
+  useContext    String                @default("MENU")
+  effectJson    Json
+  inventoryRows PlayerInventoryItem[]
+  requiredBy    MapObstacleTemplate[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+model PlayerInventoryItem {
+  id        String       @id @default(cuid())
+  playerId  String
+  itemId    String
+  quantity  Int          @default(1)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  player    Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  item      ItemTemplate @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, itemId])
+}
+
+model MapObstacleTemplate {
+  id                String       @id @default(cuid())
+  slug              String       @unique
+  name              String
+  regionSlug        String
+  description       String
+  requiredItemSlug  String
+  clearedUnlockSlug String
+  requiredItem      ItemTemplate @relation(fields: [requiredItemSlug], references: [slug])
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model PlayerUnlock {
+  id        String   @id @default(cuid())
+  playerId  String
+  slug      String
+  source    String
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, slug])
+}
+
+model DialogueTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  speakerName String
+  regionSlug  String?
+  nodesJson   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model QuestTemplate {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  description String
+  regionSlug  String?
+  stepsJson   Json
+  rewardsJson Json
+  playerRows  PlayerQuest[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PlayerQuest {
+  id               String        @id @default(cuid())
+  playerId         String
+  questTemplateId  String
+  status           QuestStatus   @default(ACTIVE)
+  currentStepIndex Int           @default(0)
+  completedStepIds Json          @default("[]")
+  completedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  player           Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  questTemplate    QuestTemplate @relation(fields: [questTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, questTemplateId])
+}
+
+model RecruitEvent {
+  id                    String               @id @default(cuid())
+  slug                  String               @unique
+  companionTemplateSlug String
+  displayName           String
+  description           String
+  requirementsJson      Json
+  rewardText            String
+  companionTemplate     CompanionTemplate    @relation(fields: [companionTemplateSlug], references: [slug])
+  claims                PlayerRecruitClaim[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+}
+
+model PlayerRecruitClaim {
+  id             String       @id @default(cuid())
+  playerId       String
+  recruitEventId String
+  companionId    String?
+  createdAt      DateTime     @default(now())
+  player         Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  recruitEvent   RecruitEvent @relation(fields: [recruitEventId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, recruitEventId])
+}
+
+model SavePointTemplate {
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  name         String
+  regionSlug   String
+  description  String
+  recoveryType String                 @default("PARTY_RECOVER")
+  unlockSlug   String
+  visits       PlayerSavePointVisit[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+}
+
+model PlayerSaveState {
+  id                String   @id @default(cuid())
+  playerId          String   @unique
+  activeRegionSlug  String?
+  lastSavePointSlug String?
+  lastSavedAt       DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  player            Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model PlayerSavePointVisit {
+  id            String            @id @default(cuid())
+  playerId      String
+  savePointSlug String
+  visitedAt     DateTime          @default(now())
+  player        Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  savePoint     SavePointTemplate @relation(fields: [savePointSlug], references: [slug])
+
+  @@unique([playerId, savePointSlug])
+}
