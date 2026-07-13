@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#10291f" />
+    <meta name="description" content="THC: The Emerald Frontier — cultivation fantasy RPG overworld prototype." />
+    <title>THC: The Emerald Frontier</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-label="THC RPG game">
+      <div id="game-root" aria-label="Overworld playfield"></div>
+      <section id="hud" aria-live="polite">
+        <div class="hud-cluster hud-top-left">
+          <p class="hud-label">Current objective</p>
+          <strong id="objective-text">Meet Seed Man near the greenhouse.</strong>
+        </div>
+        <div class="hud-cluster hud-top-right">
+          <span id="player-state">IDLE</span>
+          <span>Energy <b id="energy-value">100</b></span>
+          <span>Seeds <b id="seed-count">0</b></span>
+          <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="false">Sound On</button>
+        </div>
+        <div id="toast" class="toast" role="status"></div>
+        <button id="interaction-prompt" class="interaction-prompt" type="button" hidden>
+          <kbd>E</kbd><span>Interact</span>
+        </button>
+        <div class="controls-hint" id="controls-hint">
+          Move: WASD / arrows · Dash: Shift · Interact: E / Space
+        </div>
+        <div class="mobile-controls" aria-label="Touch controls">
+          <div class="dpad">
+            <button data-input="up" aria-label="Move up">▲</button>
+            <button data-input="left" aria-label="Move left">◀</button>
+            <button data-input="down" aria-label="Move down">▼</button>
+            <button data-input="right" aria-label="Move right">▶</button>
+          </div>
+          <div class="action-pad">
+            <button data-input="dash" aria-label="Dash">RUN</button>
+            <button data-input="interact" aria-label="Interact">ACT</button>
+          </div>
+        </div>
+      </section>
+      <div id="boot-error" class="boot-error" hidden></div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js" crossorigin="anonymous"></script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
