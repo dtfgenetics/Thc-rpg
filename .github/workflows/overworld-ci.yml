@@ -1,0 +1,28 @@
+name: Overworld CI
+
+on:
+  push:
+    branches: [main, feat/overworld-foundation]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run system tests
+        run: npm test
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Verify required entry files
+        run: test -f index.html && test -f src/main.js && test -f src/game/scenes/OverworldScene.js
