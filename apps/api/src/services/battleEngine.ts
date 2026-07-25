@@ -203,6 +203,15 @@ export async function startBattle(playerId: string, npcSlug = DEFAULT_NPC_SLUG):
     throw new Error("Player has no active party. Run the dev player setup first.");
   }
 
+  if (npcSlug === DEFAULT_NPC_SLUG) {
+    const chapterUnlock = await prisma.playerUnlock.findUnique({
+      where: { playerId_slug: { playerId, slug: "quest:clear-resin-wall:claimed" } }
+    });
+    if (!chapterUnlock) {
+      throw new Error("Clear the Resin Wall quest and claim its reward before challenging Ashtray.");
+    }
+  }
+
   const npc = await prisma.npcTemplate.findUniqueOrThrow({ where: { slug: npcSlug } });
   const npcParty = npc.partyJson as NpcPartyEntry[];
 
@@ -454,6 +463,12 @@ async function finishBattle(battle: Battle, state: BattleState, outcome: "WON" |
         kushCoin: { increment: rewards.kushCoin },
         reputation: { increment: rewards.reputation }
       }
+    });
+
+    await prisma.playerUnlock.upsert({
+      where: { playerId_slug: { playerId: state.playerId, slug: `battle-won:${state.npcSlug}` } },
+      update: { source: `battle:${state.npcSlug}` },
+      create: { playerId: state.playerId, slug: `battle-won:${state.npcSlug}`, source: `battle:${state.npcSlug}` }
     });
 
     for (const combatant of state.playerTeam) {

@@ -305,7 +305,10 @@ const recruitEvents = [
     companionTemplateSlug: "skunk-scout",
     displayName: "Recruit Skunk Scout",
     description: "After Seed Man proves himself in Grower’s Grove, a Skunk Scout agrees to join the party.",
-    requirementsJson: [{ type: "QUEST_CLAIMED", slug: "clear-resin-wall" }],
+    requirementsJson: [
+      { type: "QUEST_CLAIMED", slug: "clear-resin-wall" },
+      { type: "UNLOCK", slug: "battle-won:rival-grower-ashtray" }
+    ],
     rewardText: "Skunk Scout joined Seed Man’s crew."
   }
 ];

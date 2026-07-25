@@ -2,7 +2,7 @@
 
 import type { InventoryStackView, UnlockView } from "@thc/rpg-kernel";
 import type { BattleState, CombatantState, MoveTemplateView, TimingGrade } from "@thc/shared";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -74,9 +74,34 @@ export default function PhenoQuestPage() {
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [message, setMessage] = useState("Load a dev player to begin the vertical slice.");
   const [loading, setLoading] = useState(false);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
 
   const playerActor = useMemo(() => (battle ? firstAlive(battle.playerTeam) : undefined), [battle]);
   const enemyTarget = useMemo(() => (battle ? firstAlive(battle.enemyTeam) : undefined), [battle]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const battleId = params.get("battleId");
+    const playerId = params.get("playerId");
+    const requestedReturn = params.get("returnTo");
+    if (!battleId || !playerId) return;
+
+    setLoading(true);
+    if (requestedReturn?.startsWith("/")) setReturnTo(requestedReturn);
+    Promise.all([
+      api<PlayerSummary>(`/players/${playerId}`),
+      api<InventoryState>(`/inventory/${playerId}`),
+      api<BattleState>(`/battles/${battleId}`)
+    ])
+      .then(([loadedPlayer, loadedInventory, loadedBattle]) => {
+        setPlayer(loadedPlayer);
+        setInventoryState(loadedInventory);
+        setBattle(loadedBattle);
+        setMessage(loadedBattle.status === "ACTIVE" ? "Ashtray battle loaded from Grower’s Grove." : `Battle ${loadedBattle.status.toLowerCase()}. Return to the grove.`);
+      })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "Failed to load the linked battle."))
+      .finally(() => setLoading(false));
+  }, []);
 
   async function refreshInventory(playerId: string) {
     const nextInventory = await api<InventoryState>(`/inventory/${playerId}`);
@@ -193,7 +218,13 @@ export default function PhenoQuestPage() {
       });
       setBattle(updatedBattle);
       setPendingMove(null);
-      setMessage(`${pendingMove.move.name}: ${timing.grade} timing.`);
+      if (updatedBattle.status === "WON") {
+        setMessage("Victory over Ashtray. Return to Grower’s Grove and speak with Nugsworth.");
+      } else if (updatedBattle.status === "LOST") {
+        setMessage("Defeat. Return to Grower’s Grove and recover at the Cure Station.");
+      } else {
+        setMessage(`${pendingMove.move.name}: ${timing.grade} timing.`);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to resolve turn.");
     } finally {
@@ -228,6 +259,9 @@ export default function PhenoQuestPage() {
         <div className="top-actions">
           <button disabled={loading} onClick={loadDevPlayer}>Load Dev Player</button>
           <button disabled={!player || loading} onClick={startRivalBattle}>Start Rival Battle</button>
+          {battle && battle.status !== "ACTIVE" && returnTo && (
+            <button onClick={() => window.location.assign(returnTo)}>Return to Grower’s Grove</button>
+          )}
         </div>
       </header>
 

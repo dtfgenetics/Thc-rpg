@@ -245,6 +245,10 @@ export default function GrowersGroveGame() {
             this.lastHint = nextMessage;
             this.interactText.setText(nextMessage);
             setMessage(nextMessage);
+            if (response.navigateTo) {
+              window.location.assign(response.navigateTo);
+              return;
+            }
           } catch (error) {
             const nextMessage = error instanceof Error ? error.message : fallbackMessage;
             this.lastHint = nextMessage;
