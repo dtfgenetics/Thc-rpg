@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/index.js",
     "data:validate": "tsx src/dataIntegrity.ts",
+    "chapter:verify": "tsx src/chapterFlowVerification.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma db push",
     "db:deploy": "prisma migrate deploy",
