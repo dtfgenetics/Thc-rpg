@@ -16,7 +16,7 @@ jobs:
         with:
           ref: integration/game-recovery
           fetch-depth: 0
-      - name: Patch recovery type boundaries
+      - name: Patch recovery boundaries
         shell: python
         run: |
           from pathlib import Path
@@ -34,6 +34,12 @@ jobs:
               ],
               "apps/web/app/components/GrowersGroveGame.tsx": [
                   ("  const gameRef = useRef<{ destroy?: (removeCanvas?: boolean) => void } | null>(null);\n", "  const gameRef = useRef<{ destroy: (removeCanvas: boolean, noReturn?: boolean) => void } | null>(null);\n"),
+              ],
+              "apps/api/src/dataIntegrity.ts": [
+                  (
+                      "      report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} must define unlockSlug.`);\n",
+                      "      if (item.effectJson.unlockSlug !== undefined) {\n        report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} has an invalid optional unlockSlug.`);\n      }\n"
+                  ),
               ],
           }
 
@@ -64,5 +70,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           xargs git add < .recovery-changed-files
-          git commit -m "Fix API and Phaser type boundaries"
+          git commit -m "Fix recovery type and data boundaries"
           git push origin HEAD:integration/game-recovery
