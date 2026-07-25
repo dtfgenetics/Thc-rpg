@@ -29,7 +29,7 @@ type ProximityTarget = GroveEntityDefinition & {
 
 export default function GrowersGroveGame() {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<{ destroy?: (removeCanvas?: boolean) => void } | null>(null);
+  const gameRef = useRef<{ destroy: (removeCanvas: boolean, noReturn?: boolean) => void } | null>(null);
   const playerIdRef = useRef<string | null>(null);
   const mapStateRef = useRef<RegionMapStateView | null>(null);
   const mobileInputRef = useRef<MobileInputState>(createEmptyMobileInputState());
