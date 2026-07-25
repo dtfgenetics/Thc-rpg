@@ -47,6 +47,25 @@ jobs:
                       "            this.interactText.setText(nextMessage);\n            setMessage(nextMessage);\n            if (response.navigateTo) {\n              window.location.assign(response.navigateTo);\n              return;\n            }\n"
                   ),
               ],
+              "apps/web/app/games/pheno-quest/page.tsx": [
+                  ("import { useMemo, useState } from \"react\";\n", "import { useEffect, useMemo, useState } from \"react\";\n"),
+                  (
+                      "  const [loading, setLoading] = useState(false);\n\n  const playerActor = useMemo",
+                      "  const [loading, setLoading] = useState(false);\n  const [returnTo, setReturnTo] = useState<string | null>(null);\n\n  const playerActor = useMemo"
+                  ),
+                  (
+                      "  const enemyTarget = useMemo(() => (battle ? firstAlive(battle.enemyTeam) : undefined), [battle]);\n\n  async function refreshInventory",
+                      "  const enemyTarget = useMemo(() => (battle ? firstAlive(battle.enemyTeam) : undefined), [battle]);\n\n  useEffect(() => {\n    const params = new URLSearchParams(window.location.search);\n    const battleId = params.get(\"battleId\");\n    const playerId = params.get(\"playerId\");\n    const requestedReturn = params.get(\"returnTo\");\n    if (!battleId || !playerId) return;\n\n    setLoading(true);\n    if (requestedReturn?.startsWith(\"/\")) setReturnTo(requestedReturn);\n    Promise.all([\n      api<PlayerSummary>(`/players/${playerId}`),\n      api<InventoryState>(`/inventory/${playerId}`),\n      api<BattleState>(`/battles/${battleId}`)\n    ])\n      .then(([loadedPlayer, loadedInventory, loadedBattle]) => {\n        setPlayer(loadedPlayer);\n        setInventoryState(loadedInventory);\n        setBattle(loadedBattle);\n        setMessage(loadedBattle.status === \"ACTIVE\" ? \"Ashtray battle loaded from Grower’s Grove.\" : `Battle ${loadedBattle.status.toLowerCase()}. Return to the grove.`);\n      })\n      .catch((error) => setMessage(error instanceof Error ? error.message : \"Failed to load the linked battle.\"))\n      .finally(() => setLoading(false));\n  }, []);\n\n  async function refreshInventory"
+                  ),
+                  (
+                      "      setBattle(updatedBattle);\n      setPendingMove(null);\n      setMessage(`${pendingMove.move.name}: ${timing.grade} timing.`);\n",
+                      "      setBattle(updatedBattle);\n      setPendingMove(null);\n      if (updatedBattle.status === \"WON\") {\n        setMessage(\"Victory over Ashtray. Return to Grower’s Grove and speak with Nugsworth.\");\n      } else if (updatedBattle.status === \"LOST\") {\n        setMessage(\"Defeat. Return to Grower’s Grove and recover at the Cure Station.\");\n      } else {\n        setMessage(`${pendingMove.move.name}: ${timing.grade} timing.`);\n      }\n"
+                  ),
+                  (
+                      "          <button disabled={!player || loading} onClick={startRivalBattle}>Start Rival Battle</button>\n",
+                      "          <button disabled={!player || loading} onClick={startRivalBattle}>Start Rival Battle</button>\n          {battle && battle.status !== \"ACTIVE\" && returnTo && (\n            <button onClick={() => window.location.assign(returnTo)}>Return to Grower’s Grove</button>\n          )}\n"
+                  ),
+              ],
               "apps/api/src/dataIntegrity.ts": [
                   (
                       "      report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} must define unlockSlug.`);\n",
@@ -88,5 +107,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           xargs git add < .recovery-changed-files
-          git commit -m "Integrate chapter progression and battle routing"
+          git commit -m "Complete map-to-battle chapter routing"
           git push origin HEAD:integration/game-recovery
