@@ -1,0 +1,81 @@
+name: Apply Demo Player Concurrency Fix
+
+on:
+  push:
+    branches: [integration/game-recovery]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/game-recovery
+          fetch-depth: 0
+
+      - name: Serialize demo-player initialization
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("apps/api/src/services/battleEngine.ts")
+          content = path.read_text()
+          original = content
+
+          import_old = 'import type { Battle, CompanionTemplate, MoveTemplate } from "@prisma/client";'
+          import_new = 'import type { Battle, CompanionTemplate, MoveTemplate, Player } from "@prisma/client";'
+          if import_new not in content:
+              if import_old not in content:
+                  raise SystemExit("Could not locate Prisma type import.")
+              content = content.replace(import_old, import_new, 1)
+
+          constant_old = 'const DEFAULT_NPC_SLUG = "rival-grower-ashtray";\n'
+          constant_new = 'const DEFAULT_NPC_SLUG = "rival-grower-ashtray";\nconst devPlayerLocks = new Map<string, Promise<Player>>();\n'
+          if constant_new not in content:
+              if constant_old not in content:
+                  raise SystemExit("Could not locate default NPC constant.")
+              content = content.replace(constant_old, constant_new, 1)
+
+          function_old = 'export async function ensureDevPlayer(handle = "DTF Demo Grower") {\n'
+          function_new = '''export async function ensureDevPlayer(handle = "DTF Demo Grower"): Promise<Player> {
+            const inFlight = devPlayerLocks.get(handle);
+            if (inFlight) return inFlight;
+
+            const operation = ensureDevPlayerUnlocked(handle);
+            devPlayerLocks.set(handle, operation);
+            try {
+              return await operation;
+            } finally {
+              if (devPlayerLocks.get(handle) === operation) devPlayerLocks.delete(handle);
+            }
+          }
+
+          async function ensureDevPlayerUnlocked(handle: string): Promise<Player> {
+          '''
+          if function_new not in content:
+              if function_old not in content:
+                  raise SystemExit("Could not locate ensureDevPlayer function.")
+              content = content.replace(function_old, function_new, 1)
+
+          if content == original:
+              Path(".concurrency-fix-needed").write_text("")
+          else:
+              path.write_text(content)
+              Path(".concurrency-fix-needed").write_text("apps/api/src/services/battleEngine.ts\n")
+
+      - name: Commit concurrency fix
+        shell: bash
+        run: |
+          if [ ! -s .concurrency-fix-needed ]; then
+            echo "Demo-player concurrency fix already present."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/api/src/services/battleEngine.ts
+          git commit -m "Serialize demo player initialization"
+          git push origin HEAD:integration/game-recovery
