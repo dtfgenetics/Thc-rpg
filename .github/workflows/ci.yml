@@ -6,10 +6,15 @@ on:
     branches:
       - main
       - feature/**
+      - integration/**
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -43,7 +48,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Generate Prisma client
         run: npm run db:generate
@@ -53,6 +58,9 @@ jobs:
 
       - name: Seed database
         run: npm run db:seed
+
+      - name: Validate authoritative game data
+        run: npm run data:validate
 
       - name: Build all packages
         run: npm run build
