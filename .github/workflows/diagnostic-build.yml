@@ -3,6 +3,8 @@ name: Diagnostic Build
 on:
   push:
     branches: [integration/game-recovery]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
