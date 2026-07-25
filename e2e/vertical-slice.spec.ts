@@ -98,10 +98,18 @@ test("a prepared overworld battle loads the real party and rival teams", async (
   await page.goto(`/games/pheno-quest?${params.toString()}`);
   await expect(page.getByRole("heading", { name: "THC: Pheno Quest" })).toBeVisible();
   await expect(page.getByText("Ashtray battle loaded from Grower’s Grove.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your Party" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Enemy Party" })).toBeVisible();
-  await expect(page.getByText("Blue Mango", { exact: true })).toBeVisible();
-  await expect(page.getByText("Kush Bruiser", { exact: true })).toBeVisible();
+
+  const playerParty = page.getByRole("complementary").filter({
+    has: page.getByRole("heading", { name: "Your Party" })
+  });
+  const enemyParty = page.getByRole("complementary").filter({
+    has: page.getByRole("heading", { name: "Enemy Party" })
+  });
+
+  await expect(playerParty).toBeVisible();
+  await expect(enemyParty).toBeVisible();
+  await expect(playerParty.getByText("Blue Mango", { exact: true })).toBeVisible();
+  await expect(enemyParty.getByText("Kush Bruiser", { exact: true })).toBeVisible();
 
   const screenshot = await page.screenshot({ fullPage: true });
   await testInfo.attach(`ashtray-battle-${testInfo.project.name}`, { body: screenshot, contentType: "image/png" });
