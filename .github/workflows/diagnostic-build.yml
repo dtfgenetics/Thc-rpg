@@ -1,0 +1,31 @@
+name: Diagnostic Build
+
+on:
+  push:
+    branches: [integration/game-recovery]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npm run db:generate
+      - name: Build RPG kernel
+        run: npm run build -w packages/rpg-kernel
+      - name: Build shared battle package
+        run: npm run build -w packages/shared
+      - name: Build API
+        run: npm run build -w apps/api
+      - name: Build web
+        run: npm run build -w apps/web
