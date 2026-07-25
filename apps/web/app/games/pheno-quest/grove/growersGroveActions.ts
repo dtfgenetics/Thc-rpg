@@ -8,6 +8,7 @@ export type GroveActionResponse = {
     grantedItemSlug?: string;
   };
   message?: string;
+  navigateTo?: string;
 };
 
 export type GroveEntityAction = (playerId: string) => Promise<GroveActionResponse>;
@@ -40,6 +41,10 @@ type SavePointResponse = {
   };
 };
 
+type BattleStartResponse = {
+  id: string;
+};
+
 export function getGrowersGroveAction(slug: string): GroveEntityAction {
   if (slug === "garden-keeper-intro") return (playerId) => talkToGardenKeeper(playerId);
   if (slug === "terp-tonic") return (playerId) => pickup(playerId, "terp-tonic", 1);
@@ -48,7 +53,7 @@ export function getGrowersGroveAction(slug: string): GroveEntityAction {
   if (slug === "resin-wall-grove") return (playerId) => useToolAndAdvance(playerId, "grinder-relic", "resin-wall-grove");
   if (slug === "smoke-path-grove") return (playerId) => useTool(playerId, "vapor-lens", "smoke-path-grove");
   if (slug === "growers-grove-cure-station") return (playerId) => saveAtCureStation(playerId);
-  if (slug === "rival-grower-ashtray") return async () => ({ message: "Rival Grower Ashtray: Meet me on the battle screen, Seed Man." });
+  if (slug === "rival-grower-ashtray") return (playerId) => startRivalBattle(playerId);
   return async () => ({ message: "Nothing happened." });
 }
 
@@ -74,19 +79,29 @@ async function talkToGardenKeeper(playerId: string): Promise<QuestResponse> {
       method: "POST",
       body: JSON.stringify({ playerId, questSlug: "clear-resin-wall" })
     });
+    const recruit = await tryRecruitSkunkScout(playerId);
+    return recruit ? { message: `${claim.message} ${recruit.message}` } : { message: `${claim.message} Rest at the Cure Station, then defeat Ashtray.` };
+  }
 
-    try {
-      const recruit = await gameApi<RecruitmentResponse>("/recruitment/recruit", {
-        method: "POST",
-        body: JSON.stringify({ playerId, recruitSlug: "recruit-skunk-scout" })
-      });
-      return { message: `${claim.message} ${recruit.message}` };
-    } catch {
-      return claim;
-    }
+  if (talkResult.message === "Quest reward already claimed." || returnResult.message === "Quest reward already claimed.") {
+    const recruit = await tryRecruitSkunkScout(playerId);
+    return recruit
+      ? { message: recruit.message }
+      : { message: "Nugsworth: The trail is open. Rest at the Cure Station, defeat Ashtray, then return to me." };
   }
 
   return returnResult.message.startsWith("Current quest step") ? returnResult : talkResult;
+}
+
+async function tryRecruitSkunkScout(playerId: string): Promise<RecruitmentResponse | null> {
+  try {
+    return await gameApi<RecruitmentResponse>("/recruitment/recruit", {
+      method: "POST",
+      body: JSON.stringify({ playerId, recruitSlug: "recruit-skunk-scout" })
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function pickup(playerId: string, itemSlug: string, quantity: number): Promise<InteractionResponse> {
@@ -126,4 +141,20 @@ async function saveAtCureStation(playerId: string): Promise<SavePointResponse> {
     method: "POST",
     body: JSON.stringify({ playerId, savePointSlug: "growers-grove-cure-station" })
   });
+}
+
+async function startRivalBattle(playerId: string): Promise<GroveActionResponse> {
+  const battle = await gameApi<BattleStartResponse>("/battles/start", {
+    method: "POST",
+    body: JSON.stringify({ playerId, npcSlug: "rival-grower-ashtray" })
+  });
+  const params = new URLSearchParams({
+    battleId: battle.id,
+    playerId,
+    returnTo: "/games/pheno-quest/grove"
+  });
+  return {
+    message: "Ashtray accepted the challenge. Entering battle…",
+    navigateTo: `/games/pheno-quest?${params.toString()}`
+  };
 }
