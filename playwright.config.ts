@@ -25,16 +25,20 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm run start -w apps/api",
+      command: "bash -lc 'npm run start -w apps/api 2>&1 | tee api-server.log'",
       url: "http://127.0.0.1:4000/health",
       timeout: 120_000,
-      reuseExistingServer: !process.env.CI
+      reuseExistingServer: !process.env.CI,
+      stdout: "pipe",
+      stderr: "pipe"
     },
     {
-      command: "npm run start -w apps/web",
+      command: "bash -lc 'npm run start -w apps/web -- -H 127.0.0.1 -p 3000 2>&1 | tee web-server.log'",
       url: "http://127.0.0.1:3000/games/pheno-quest/grove",
       timeout: 120_000,
-      reuseExistingServer: !process.env.CI
+      reuseExistingServer: !process.env.CI,
+      stdout: "pipe",
+      stderr: "pipe"
     }
   ]
 });
