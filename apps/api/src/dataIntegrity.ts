@@ -119,7 +119,9 @@ export async function validateGameData(): Promise<void> {
     }
     if (effectType === "CLEAR_OBSTACLE" || effectType === "REVEAL_PATH") {
       report(errors, nonEmptyString(item.effectJson.requiredTargetTag), `Tool ${item.slug} must define requiredTargetTag.`);
-      report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} must define unlockSlug.`);
+      if (item.effectJson.unlockSlug !== undefined) {
+        report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} has an invalid optional unlockSlug.`);
+      }
     }
   }
 
