@@ -12,11 +12,13 @@ This branch is the authoritative recovery line for THC: Pheno Quest.
 ## Completed recovery work
 
 - Established one recovery branch from the larger 150-commit RPG foundation.
-- Added package-by-package diagnostic builds.
+- Added package-by-package diagnostic builds and compiler-report artifacts.
 - Confirmed the RPG kernel builds successfully.
 - Confirmed the shared battle package builds successfully.
 - Confirmed Prisma client generation succeeds.
 - Fixed strict Prisma JSON boundaries for battle logs, item effects, quest steps, and recruitment requirements.
+- Confirmed the API package builds successfully after those corrections.
+- Fixed the Phaser game reference type that blocked the Next.js production build.
 
 ## Release gates
 
@@ -24,7 +26,7 @@ This branch is the authoritative recovery line for THC: Pheno Quest.
 - [x] shared battle package builds
 - [x] Prisma client generates
 - [ ] RPG kernel and shared package tests pass
-- [ ] API builds
+- [x] API builds
 - [ ] web application builds
 - [ ] Grower's Grove boots in desktop and mobile browsers
 - [ ] map interaction enters battle and returns to the map
