@@ -9,13 +9,23 @@ This branch is the authoritative recovery line for THC: Pheno Quest.
 3. Integrate the proven overworld movement, interaction, touch-control, animation, and reaction-audio systems.
 4. Produce one complete Grower's Grove loop before adding another region.
 
+## Completed recovery work
+
+- Established one recovery branch from the larger 150-commit RPG foundation.
+- Added package-by-package diagnostic builds.
+- Confirmed the RPG kernel builds successfully.
+- Confirmed the shared battle package builds successfully.
+- Confirmed Prisma client generation succeeds.
+- Fixed strict Prisma JSON boundaries for battle logs, item effects, quest steps, and recruitment requirements.
+
 ## Release gates
 
-- RPG kernel builds and tests
-- shared battle package builds and tests
-- Prisma client generates
-- API builds
-- web application builds
-- Grower's Grove boots in desktop and mobile browsers
-- map interaction enters battle and returns to the map
-- save/reload restores chapter progress
+- [x] RPG kernel builds
+- [x] shared battle package builds
+- [x] Prisma client generates
+- [ ] RPG kernel and shared package tests pass
+- [ ] API builds
+- [ ] web application builds
+- [ ] Grower's Grove boots in desktop and mobile browsers
+- [ ] map interaction enters battle and returns to the map
+- [ ] save/reload restores chapter progress
