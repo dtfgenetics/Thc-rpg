@@ -27,6 +27,7 @@ jobs:
       - name: Build shared battle package
         run: npm run build -w packages/shared --silent
       - name: Build API with concise diagnostics
+        id: api_build
         shell: bash
         run: |
           set +e
@@ -34,6 +35,14 @@ jobs:
           status=$?
           cat api-build.log
           exit $status
+      - name: Upload API compiler report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-compiler-report
+          path: api-build.log
+          if-no-files-found: error
+          retention-days: 2
       - name: Build web with concise diagnostics
         shell: bash
         run: |
@@ -42,3 +51,11 @@ jobs:
           status=$?
           cat web-build.log
           exit $status
+      - name: Upload web compiler report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-compiler-report
+          path: web-build.log
+          if-no-files-found: ignore
+          retention-days: 2
