@@ -136,7 +136,7 @@ export async function useConsumable(
     throw new Error("Key tools are used through map interactions, not consumed.");
   }
 
-  const effect = row.item.effectJson as ItemEffect;
+  const effect = row.item.effectJson as unknown as ItemEffect;
   let resultMessage = `${row.item.name} used. Effect queued: ${effect.type}.`;
 
   await prisma.$transaction(async (tx) => {

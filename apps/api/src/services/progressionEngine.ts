@@ -170,7 +170,7 @@ export async function advanceQuest(params: {
     return { quest: toPlayerQuestView(questRow), message: "Quest reward already claimed." };
   }
 
-  const steps = Array.isArray(questTemplate.stepsJson) ? (questTemplate.stepsJson as QuestStepDefinition[]) : [];
+  const steps = Array.isArray(questTemplate.stepsJson) ? (questTemplate.stepsJson as unknown as QuestStepDefinition[]) : [];
   const currentStep = steps[questRow.currentStepIndex];
 
   if (!currentStep) {
@@ -351,7 +351,7 @@ export async function recruitCompanion(playerId: string, recruitSlug: string): P
     prisma.playerInventoryItem.findMany({ where: { playerId }, include: { item: true } })
   ]);
 
-  const requirements = Array.isArray(recruitEvent.requirementsJson) ? (recruitEvent.requirementsJson as RecruitRequirement[]) : [];
+  const requirements = Array.isArray(recruitEvent.requirementsJson) ? (recruitEvent.requirementsJson as unknown as RecruitRequirement[]) : [];
   if (!requirementsMet(requirements, { quests, unlocks, inventory })) {
     throw new Error("Recruitment requirements are not met yet.");
   }

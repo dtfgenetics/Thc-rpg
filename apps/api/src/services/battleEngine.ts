@@ -261,7 +261,7 @@ export async function startBattle(playerId: string, npcSlug = DEFAULT_NPC_SLUG):
       turnNumber: 1,
       activeSide: "PLAYER",
       state: {},
-      log: initialLog
+      log: initialLog as never
     }
   });
 
