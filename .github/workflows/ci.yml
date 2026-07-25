@@ -80,5 +80,23 @@ jobs:
       - name: Build all packages
         run: npm run build
 
+      - name: Verify complete Growers Grove chapter flow
+        shell: bash
+        run: |
+          set +e
+          npm run chapter:verify > chapter-flow-verification.log 2>&1
+          status=$?
+          cat chapter-flow-verification.log
+          exit $status
+
+      - name: Upload chapter flow report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chapter-flow-verification-report
+          path: chapter-flow-verification.log
+          if-no-files-found: ignore
+          retention-days: 2
+
       - name: Run tests
         run: npm test
