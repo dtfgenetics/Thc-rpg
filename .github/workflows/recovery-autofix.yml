@@ -24,6 +24,14 @@ jobs:
           replacements = {
               "apps/api/src/services/battleEngine.ts": [
                   ("      log: initialLog\n", "      log: initialLog as never\n"),
+                  (
+                      "  const npc = await prisma.npcTemplate.findUniqueOrThrow({ where: { slug: npcSlug } });\n",
+                      "  if (npcSlug === DEFAULT_NPC_SLUG) {\n    const chapterUnlock = await prisma.playerUnlock.findUnique({\n      where: { playerId_slug: { playerId, slug: \"quest:clear-resin-wall:claimed\" } }\n    });\n    if (!chapterUnlock) {\n      throw new Error(\"Clear the Resin Wall quest and claim its reward before challenging Ashtray.\");\n    }\n  }\n\n  const npc = await prisma.npcTemplate.findUniqueOrThrow({ where: { slug: npcSlug } });\n"
+                  ),
+                  (
+                      "    await prisma.player.update({\n      where: { id: state.playerId },\n      data: {\n        kushCoin: { increment: rewards.kushCoin },\n        reputation: { increment: rewards.reputation }\n      }\n    });\n\n    for (const combatant of state.playerTeam) {\n",
+                      "    await prisma.player.update({\n      where: { id: state.playerId },\n      data: {\n        kushCoin: { increment: rewards.kushCoin },\n        reputation: { increment: rewards.reputation }\n      }\n    });\n\n    await prisma.playerUnlock.upsert({\n      where: { playerId_slug: { playerId: state.playerId, slug: `battle-won:${state.npcSlug}` } },\n      update: { source: `battle:${state.npcSlug}` },\n      create: { playerId: state.playerId, slug: `battle-won:${state.npcSlug}`, source: `battle:${state.npcSlug}` }\n    });\n\n    for (const combatant of state.playerTeam) {\n"
+                  ),
               ],
               "apps/api/src/services/inventoryEngine.ts": [
                   ("  const effect = row.item.effectJson as ItemEffect;\n", "  const effect = row.item.effectJson as unknown as ItemEffect;\n"),
@@ -34,11 +42,21 @@ jobs:
               ],
               "apps/web/app/components/GrowersGroveGame.tsx": [
                   ("  const gameRef = useRef<{ destroy?: (removeCanvas?: boolean) => void } | null>(null);\n", "  const gameRef = useRef<{ destroy: (removeCanvas: boolean, noReturn?: boolean) => void } | null>(null);\n"),
+                  (
+                      "            this.interactText.setText(nextMessage);\n            setMessage(nextMessage);\n",
+                      "            this.interactText.setText(nextMessage);\n            setMessage(nextMessage);\n            if (response.navigateTo) {\n              window.location.assign(response.navigateTo);\n              return;\n            }\n"
+                  ),
               ],
               "apps/api/src/dataIntegrity.ts": [
                   (
                       "      report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} must define unlockSlug.`);\n",
                       "      if (item.effectJson.unlockSlug !== undefined) {\n        report(errors, nonEmptyString(item.effectJson.unlockSlug), `Tool ${item.slug} has an invalid optional unlockSlug.`);\n      }\n"
+                  ),
+              ],
+              "apps/api/prisma/seed.ts": [
+                  (
+                      "    requirementsJson: [{ type: \"QUEST_CLAIMED\", slug: \"clear-resin-wall\" }],\n",
+                      "    requirementsJson: [\n      { type: \"QUEST_CLAIMED\", slug: \"clear-resin-wall\" },\n      { type: \"UNLOCK\", slug: \"battle-won:rival-grower-ashtray\" }\n    ],\n"
                   ),
               ],
           }
@@ -70,5 +88,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           xargs git add < .recovery-changed-files
-          git commit -m "Fix recovery type and data boundaries"
+          git commit -m "Integrate chapter progression and battle routing"
           git push origin HEAD:integration/game-recovery
