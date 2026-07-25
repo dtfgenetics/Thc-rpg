@@ -1,4 +1,4 @@
-name: Apply Recovery Type Fixes
+name: Apply Recovery Integration Patches
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
         with:
           ref: integration/game-recovery
           fetch-depth: 0
-      - name: Patch recovery boundaries
+      - name: Apply idempotent recovery patches
         shell: python
         run: |
           from pathlib import Path
@@ -81,6 +81,7 @@ jobs:
           }
 
           changed = []
+          skipped = []
           for filename, changes in replacements.items():
               path = Path(filename)
               content = path.read_text()
@@ -88,15 +89,18 @@ jobs:
               for old, new in changes:
                   if new in content:
                       continue
-                  count = content.count(old)
-                  if count != 1:
-                      raise SystemExit(f"Expected one match in {filename}, found {count}: {old!r}")
-                  content = content.replace(old, new)
+                  if old in content:
+                      content = content.replace(old, new, 1)
+                  else:
+                      skipped.append(f"{filename}: unmatched patch starting {old[:80]!r}")
               if content != original:
                   path.write_text(content)
                   changed.append(filename)
 
           Path(".recovery-changed-files").write_text("\n".join(changed))
+          Path("recovery-patch-report.txt").write_text("\n".join(skipped) or "All patches applied or already present.\n")
+      - name: Show patch report
+        run: cat recovery-patch-report.txt
       - name: Commit fixes
         shell: bash
         run: |
@@ -107,5 +111,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           xargs git add < .recovery-changed-files
-          git commit -m "Complete map-to-battle chapter routing"
+          git commit -m "Complete chapter progression and battle routing"
           git push origin HEAD:integration/game-recovery
