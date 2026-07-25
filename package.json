@@ -1,0 +1,33 @@
+{
+  "name": "thc-pheno-quest",
+  "private": true,
+  "version": "0.1.0",
+  "description": "THC: Pheno Quest vertical playable slice monorepo.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run build -w packages/rpg-kernel && npm run build -w packages/shared && npm run dev -w apps/api",
+    "dev:web": "npm run build -w packages/rpg-kernel && npm run build -w packages/shared && npm run dev -w apps/web",
+    "build": "npm run build -w packages/rpg-kernel && npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
+    "test": "npm run build -w packages/rpg-kernel && npm run test -w packages/rpg-kernel && npm run build -w packages/shared && npm run test -w packages/shared",
+    "test:e2e": "playwright test",
+    "data:validate": "npm run data:validate -w apps/api",
+    "chapter:verify": "npm run chapter:verify -w apps/api",
+    "db:generate": "npm run db:generate -w apps/api",
+    "db:migrate": "npm run db:migrate -w apps/api",
+    "db:deploy": "npm run db:deploy -w apps/api",
+    "db:seed": "npm run db:seed -w apps/api",
+    "db:studio": "npm run db:studio -w apps/api",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "setup:local": "npm install && npm run db:up && npm run db:generate && npm run db:migrate && npm run db:seed && npm run data:validate && npm run build && npm run chapter:verify"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,80 @@
+name: Browser Smoke
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - integration/**
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: thc_pheno_quest
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d thc_pheno_quest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CI: true
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/thc_pheno_quest?schema=public
+      PORT: 4000
+      NODE_ENV: test
+      CORS_ORIGIN: http://127.0.0.1:3000
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Generate and seed database
+        run: |
+          npm run db:generate
+          npm run db:migrate
+          npm run db:seed
+          npm run data:validate
+
+      - name: Build production applications
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run desktop and mobile browser smoke tests
+        run: npm run test:e2e
+
+      - name: Upload rendered game evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pheno-quest-browser-evidence
+          path: |
+            playwright-report
+            test-results
+            api-server.log
+            web-server.log
+          if-no-files-found: ignore
+          retention-days: 7
