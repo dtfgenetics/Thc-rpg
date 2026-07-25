@@ -60,7 +60,22 @@ jobs:
         run: npm run db:seed
 
       - name: Validate authoritative game data
-        run: npm run data:validate
+        shell: bash
+        run: |
+          set +e
+          npm run data:validate > game-data-validation.log 2>&1
+          status=$?
+          cat game-data-validation.log
+          exit $status
+
+      - name: Upload game data validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-data-validation-report
+          path: game-data-validation.log
+          if-no-files-found: ignore
+          retention-days: 2
 
       - name: Build all packages
         run: npm run build
