@@ -34,7 +34,7 @@ jobs:
       CI: true
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/thc_pheno_quest?schema=public
       PORT: 4000
-      NODE_ENV: test
+      NODE_ENV: production
       CORS_ORIGIN: http://127.0.0.1:3000
       NEXT_PUBLIC_API_URL: http://127.0.0.1:4000
 
@@ -74,5 +74,7 @@ jobs:
           path: |
             playwright-report
             test-results
+            api-server.log
+            web-server.log
           if-no-files-found: ignore
           retention-days: 7
