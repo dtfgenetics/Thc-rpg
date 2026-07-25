@@ -1,4 +1,4 @@
-import type { Battle, CompanionTemplate, MoveTemplate } from "@prisma/client";
+import type { Battle, CompanionTemplate, MoveTemplate, Player } from "@prisma/client";
 import {
   applyXp,
   AWAKENING_DURATION_TURNS,
@@ -21,6 +21,7 @@ import {
 import { prisma } from "../prismaClient.js";
 
 const DEFAULT_NPC_SLUG = "rival-grower-ashtray";
+const devPlayerLocks = new Map<string, Promise<Player>>();
 
 type TemplateWithMoves = CompanionTemplate & {
   moves: Array<{
@@ -113,7 +114,20 @@ function templateToCombatant(params: {
   };
 }
 
-export async function ensureDevPlayer(handle = "DTF Demo Grower") {
+export async function ensureDevPlayer(handle = "DTF Demo Grower"): Promise<Player> {
+  const inFlight = devPlayerLocks.get(handle);
+  if (inFlight) return inFlight;
+
+  const operation = ensureDevPlayerUnlocked(handle);
+  devPlayerLocks.set(handle, operation);
+  try {
+    return await operation;
+  } finally {
+    if (devPlayerLocks.get(handle) === operation) devPlayerLocks.delete(handle);
+  }
+}
+
+async function ensureDevPlayerUnlocked(handle: string): Promise<Player> {
   const player = await prisma.player.upsert({
     where: { handle },
     update: {},
