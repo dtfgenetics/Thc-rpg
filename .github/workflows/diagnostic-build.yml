@@ -19,14 +19,26 @@ jobs:
         with:
           node-version: 20
       - name: Install dependencies
-        run: npm install
+        run: npm install --silent --no-audit --no-fund
       - name: Generate Prisma client
-        run: npm run db:generate
+        run: npm run db:generate --silent
       - name: Build RPG kernel
-        run: npm run build -w packages/rpg-kernel
+        run: npm run build -w packages/rpg-kernel --silent
       - name: Build shared battle package
-        run: npm run build -w packages/shared
-      - name: Build API
-        run: npm run build -w apps/api
-      - name: Build web
-        run: npm run build -w apps/web
+        run: npm run build -w packages/shared --silent
+      - name: Build API with concise diagnostics
+        shell: bash
+        run: |
+          set +e
+          npm run build -w apps/api --silent > api-build.log 2>&1
+          status=$?
+          cat api-build.log
+          exit $status
+      - name: Build web with concise diagnostics
+        shell: bash
+        run: |
+          set +e
+          npm run build -w apps/web --silent > web-build.log 2>&1
+          status=$?
+          cat web-build.log
+          exit $status
