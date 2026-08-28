@@ -1,0 +1,10 @@
+{
+  "name": "thc-rpg",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node test/game-core.test.mjs && node test/content-contract.test.mjs",
+    "check": "node --check src/game-core.mjs && node --check public/app.js && npm test"
+  }
+}
