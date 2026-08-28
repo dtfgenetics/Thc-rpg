@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1710" />
+  <meta name="description" content="THC RPG: The Grower's Path — survive Seedling Shift by reading plant and room clues, making cultivation decisions, and building grower knowledge." />
+  <title>THC RPG — The Grower's Path</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#game">Skip to game</a>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">DTF Game Hub · Original cultivation adventure</p>
+        <h1>THC RPG</h1>
+        <h2>The Grower's Path</h2>
+        <p class="lede">Seedling Shift is your first district. Read the room, protect the plant, build knowledge, and make it through eight escalating cultivation events.</p>
+        <div class="hero-tags"><span>8 room events</span><span>24 choices</span><span>local save</span><span>keyboard + touch</span></div>
+        <div class="hero-actions">
+          <button id="start-run" class="primary" type="button">Start Seedling Shift</button>
+          <button id="continue-run" type="button" hidden>Continue Run</button>
+        </div>
+      </div>
+      <div class="plant-orbit" aria-hidden="true">
+        <div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div>
+        <div class="plant-mark">THC<span>RPG</span></div>
+        <span class="orbit-stat stat-vigor">Vigor</span><span class="orbit-stat stat-stress">Stress</span><span class="orbit-stat stat-knowledge">Knowledge</span>
+      </div>
+    </section>
+
+    <section id="game" class="game-console" hidden aria-live="polite">
+      <header class="console-head">
+        <div><p class="eyebrow">Quest 01</p><h2>Seedling Shift</h2></div>
+        <div class="head-actions"><button id="save-exit" type="button">Save</button><button id="restart-run" type="button">Restart</button></div>
+      </header>
+
+      <div class="mission-row">
+        <div><span>Event</span><strong id="turn-display">1 / 8</strong></div>
+        <div><span>Rank path</span><strong id="rank-preview">Seedling Runner</strong></div>
+        <div><span>Run score</span><strong id="score-display">0</strong></div>
+      </div>
+      <progress id="run-progress" max="8" value="0">0/8</progress>
+
+      <div class="stat-grid" aria-label="Current run stats">
+        <article><span>Plant vigor</span><strong id="vigor-value">68</strong><div class="meter"><i id="vigor-meter"></i></div></article>
+        <article><span>Plant stress</span><strong id="stress-value">22</strong><div class="meter stress"><i id="stress-meter"></i></div></article>
+        <article><span>Grower energy</span><strong id="energy-value">6</strong><div class="meter energy"><i id="energy-meter"></i></div></article>
+        <article><span>Knowledge</span><strong id="knowledge-value">0</strong><div class="meter knowledge"><i id="knowledge-meter"></i></div></article>
+      </div>
+
+      <section id="encounter-card" class="encounter-card">
+        <div class="encounter-meta"><span id="encounter-number">Room Event 01</span><span id="encounter-id"></span></div>
+        <h2 id="encounter-title">Loading room...</h2>
+        <p id="encounter-scene"></p>
+        <div id="choice-list" class="choice-list"></div>
+        <p class="keyboard-note">Keyboard: 1 / 2 / 3 chooses an action.</p>
+      </section>
+
+      <section id="feedback-card" class="feedback-card" hidden>
+        <p class="eyebrow">Field note</p>
+        <h3 id="feedback-title"></h3>
+        <p id="feedback-copy"></p>
+        <div class="lesson"><strong>Why it matters</strong><span id="lesson-copy"></span></div>
+        <button id="next-event" class="primary" type="button">Next room event</button>
+      </section>
+
+      <section class="field-log">
+        <div class="field-log-heading"><h3>Shift Log</h3><button id="toggle-log" type="button" aria-expanded="false">Show log</button></div>
+        <ol id="history-list" hidden></ol>
+      </section>
+    </section>
+
+    <section id="results" class="results" hidden aria-live="polite">
+      <p class="eyebrow">Seedling Shift report</p>
+      <h2 id="result-title">Shift Complete</h2>
+      <p id="result-rank" class="result-rank"></p>
+      <div class="result-score" id="result-score"></div>
+      <div id="result-stats" class="result-stats"></div>
+      <p id="result-copy"></p>
+      <div class="result-actions"><button id="play-again" class="primary" type="button">Run Seedling Shift Again</button></div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
