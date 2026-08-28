@@ -1,0 +1,90 @@
+[
+  {
+    "id": "wet-root-zone",
+    "title": "The Pot Won't Dry",
+    "scene": "The seedling is drooping even though the root zone is still wet. The room smells fine, but the container has stayed heavy far longer than expected.",
+    "lesson": "A saturated root zone can reduce oxygen availability. Diagnose water status before adding more irrigation or fertilizer.",
+    "choices": [
+      { "id": "dryback", "label": "Pause irrigation, improve air movement, and watch the dryback", "quality": "best", "effects": { "vigor": 8, "stress": -8, "knowledge": 3, "energy": -1, "score": 140 }, "feedback": "Good read. You treated the wet root zone as an aeration/water-management problem instead of adding another input." },
+      { "id": "feed", "label": "Add a stronger feed because the plant looks hungry", "quality": "poor", "effects": { "vigor": -10, "stress": 16, "knowledge": 1, "energy": -1, "score": -35 }, "feedback": "The root zone was already saturated. More solution increases the load without correcting the underlying oxygen problem." },
+      { "id": "wait", "label": "Do nothing and check again much later", "quality": "mixed", "effects": { "vigor": -2, "stress": 4, "knowledge": 1, "energy": 0, "score": 35 }, "feedback": "Avoiding more water helps, but active observation and environmental correction would give the plant a better recovery path." }
+    ]
+  },
+  {
+    "id": "light-stress",
+    "title": "Top Growth Is Praying Too Hard",
+    "scene": "The newest leaves are paling and curling upward near the center of the light footprint while lower growth still looks normal.",
+    "lesson": "When symptoms are strongest nearest the fixture, verify light intensity and leaf temperature before assuming a nutrient problem.",
+    "choices": [
+      { "id": "measure-adjust", "label": "Check canopy conditions and reduce or raise the light if needed", "quality": "best", "effects": { "vigor": 7, "stress": -7, "knowledge": 3, "energy": -1, "score": 145 }, "feedback": "You matched the symptom pattern to the environment and changed the likely stressor instead of chasing nutrients." },
+      { "id": "more-hours", "label": "Add more light hours so the plant can recover faster", "quality": "poor", "effects": { "vigor": -8, "stress": 14, "knowledge": 1, "energy": -1, "score": -25 }, "feedback": "More exposure can compound light and heat stress. Recovery starts with reducing the excessive demand." },
+      { "id": "heavy-feed", "label": "Increase nutrients immediately", "quality": "poor", "effects": { "vigor": -5, "stress": 10, "knowledge": 1, "energy": -1, "score": 0 }, "feedback": "The location of the damage points to the canopy environment first. Feeding without diagnosis adds another variable." }
+    ]
+  },
+  {
+    "id": "gnat-scout",
+    "title": "Tiny Flyers at the Media Line",
+    "scene": "You notice a few small dark flies staying close to moist substrate. The plant is still growing, but the population could expand quickly.",
+    "lesson": "Integrated pest management starts with identification, monitoring, sanitation, and correcting conditions that favor the pest.",
+    "choices": [
+      { "id": "ipm", "label": "Scout closely, add monitoring cards, clean debris, and correct excess surface moisture", "quality": "best", "effects": { "vigor": 6, "stress": -5, "knowledge": 4, "energy": -2, "score": 155 }, "feedback": "You used an IPM sequence: identify, monitor, remove favorable conditions, and gather evidence before escalating controls." },
+      { "id": "random-spray", "label": "Use a random strong spray before identifying the pest", "quality": "poor", "effects": { "vigor": -7, "stress": 11, "knowledge": 0, "energy": -2, "score": -30 }, "feedback": "Unplanned treatment can stress the plant and still miss the pest. Identification and monitoring should drive the response." },
+      { "id": "ignore", "label": "Ignore them because only a few are visible", "quality": "poor", "effects": { "vigor": -6, "stress": 12, "knowledge": 1, "energy": 0, "score": -10 }, "feedback": "Early scouting is valuable precisely because populations are easier to manage before they become obvious." }
+    ]
+  },
+  {
+    "id": "ph-drift",
+    "title": "The Meter Says Something Changed",
+    "scene": "A root-zone reading is far from the previous trend, but the plant has only subtle symptoms and the meter has not been checked recently.",
+    "lesson": "A surprising measurement should be verified before aggressive correction. Instrument error and sampling method can create false diagnoses.",
+    "choices": [
+      { "id": "verify", "label": "Verify the meter and repeat the measurement before changing the root zone", "quality": "best", "effects": { "vigor": 6, "stress": -5, "knowledge": 4, "energy": -1, "score": 150 }, "feedback": "You verified the evidence before acting. That prevents a bad reading from turning into a real root-zone problem." },
+      { "id": "chase", "label": "Make a large correction immediately", "quality": "poor", "effects": { "vigor": -9, "stress": 14, "knowledge": 1, "energy": -2, "score": -35 }, "feedback": "Large reactive corrections can create instability. Confirm the measurement first, then make controlled changes if needed." },
+      { "id": "discard", "label": "Assume the reading is meaningless and stop checking", "quality": "mixed", "effects": { "vigor": -2, "stress": 4, "knowledge": 1, "energy": 0, "score": 25 }, "feedback": "Skepticism is useful, but the right response is verification—not abandoning measurement." }
+    ]
+  },
+  {
+    "id": "weak-stem",
+    "title": "Stretching Toward the Fixture",
+    "scene": "The seedling has a long flexible stem and leans easily when the room is disturbed.",
+    "lesson": "Weak elongated growth is a reason to inspect light placement, airflow, support, and overall seedling conditions before using aggressive training.",
+    "choices": [
+      { "id": "support", "label": "Stabilize the environment, add gentle air movement, and support the stem", "quality": "best", "effects": { "vigor": 8, "stress": -6, "knowledge": 3, "energy": -1, "score": 140 }, "feedback": "You supported the young plant while addressing environmental causes instead of treating a seedling like a mature training project." },
+      { "id": "hard-train", "label": "Bend and heavily train the seedling immediately", "quality": "poor", "effects": { "vigor": -11, "stress": 16, "knowledge": 1, "energy": -2, "score": -40 }, "feedback": "Aggressive training adds stress before the young stem and root system are ready." },
+      { "id": "stake-only", "label": "Stake it upright but change nothing else", "quality": "mixed", "effects": { "vigor": 1, "stress": 1, "knowledge": 1, "energy": -1, "score": 45 }, "feedback": "Support helps prevent damage, but the underlying light or airflow issue still deserves attention." }
+    ]
+  },
+  {
+    "id": "temperature-swing",
+    "title": "The Room Swings Hard After Lights Out",
+    "scene": "Day conditions are stable, but the room changes sharply when the lights cycle and growth has slowed.",
+    "lesson": "Environmental stability matters. Before changing nutrition, inspect temperature, humidity, airflow, and the timing of those changes.",
+    "choices": [
+      { "id": "stabilize", "label": "Track the swing and stabilize the room before changing the feed", "quality": "best", "effects": { "vigor": 7, "stress": -7, "knowledge": 3, "energy": -1, "score": 145 }, "feedback": "You kept the diagnosis tied to the observed environmental change and reduced an unnecessary variable." },
+      { "id": "feed-change", "label": "Rewrite the nutrient program first", "quality": "poor", "effects": { "vigor": -5, "stress": 10, "knowledge": 1, "energy": -1, "score": -15 }, "feedback": "The strongest clue was the environmental swing. Changing feed first makes the diagnosis harder." },
+      { "id": "ignore-swing", "label": "Ignore it because the daily average still looks acceptable", "quality": "mixed", "effects": { "vigor": -3, "stress": 6, "knowledge": 1, "energy": 0, "score": 20 }, "feedback": "Averages can hide stressful transitions. The timing and size of swings can matter even when the mean looks normal." }
+    ]
+  },
+  {
+    "id": "chlorosis-diagnosis",
+    "title": "A Leaf Starts Losing Color",
+    "scene": "One symptom appears: pale tissue. You do not yet know whether it began on old or new growth, and no root-zone measurements have been verified.",
+    "lesson": "Visual symptoms are clues, not proof. A useful diagnosis combines symptom location and pattern with root-zone and environmental context.",
+    "choices": [
+      { "id": "diagnose", "label": "Map where the symptom started and verify root-zone/environment data", "quality": "best", "effects": { "vigor": 6, "stress": -4, "knowledge": 5, "energy": -2, "score": 160 }, "feedback": "You collected the context needed to distinguish several look-alike causes instead of treating color loss as a single diagnosis." },
+      { "id": "add-everything", "label": "Add a broad heavy nutrient dose immediately", "quality": "poor", "effects": { "vigor": -10, "stress": 15, "knowledge": 0, "energy": -1, "score": -45 }, "feedback": "A broad correction without diagnosis can worsen the root zone and hide the original cause." },
+      { "id": "pluck", "label": "Remove the leaf and call the problem solved", "quality": "mixed", "effects": { "vigor": -2, "stress": 3, "knowledge": 1, "energy": -1, "score": 15 }, "feedback": "Removing a symptom does not explain why it appeared. Track the pattern before the next decision." }
+    ]
+  },
+  {
+    "id": "transplant-ready",
+    "title": "The Next Container Is Waiting",
+    "scene": "The plant has recovered well. Growth is active and the current root zone cycles predictably. You need to decide whether to move it forward.",
+    "lesson": "Transplant timing should use plant/root development and container behavior rather than a calendar alone.",
+    "choices": [
+      { "id": "evaluate", "label": "Check root development and current container behavior, then transplant if ready", "quality": "best", "effects": { "vigor": 10, "stress": -6, "knowledge": 4, "energy": -2, "score": 180 }, "feedback": "You based the transition on plant readiness and root-zone behavior. The Seedling Shift is ready to close." },
+      { "id": "calendar", "label": "Transplant only because the planned date arrived", "quality": "mixed", "effects": { "vigor": 1, "stress": 4, "knowledge": 1, "energy": -1, "score": 45 }, "feedback": "Schedules help organize work, but biological readiness is the stronger signal for the plant." },
+      { "id": "delay", "label": "Keep it in the small container indefinitely because it is currently healthy", "quality": "poor", "effects": { "vigor": -6, "stress": 10, "knowledge": 1, "energy": 0, "score": -20 }, "feedback": "A plant can outgrow a stable small container. Healthy current conditions do not mean the root zone should never advance." }
+    ]
+  }
+]
