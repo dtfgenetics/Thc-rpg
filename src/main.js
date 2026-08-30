@@ -265,16 +265,31 @@ function talkToJenkins() {
     updateUI();
 }
 
+function formatTrait(trait) {
+    return String(trait || '').replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function phenotypeSeedLabel(seed) {
+    return `#${Number(seed || 0).toString(16).padStart(8, '0').toUpperCase()}`;
+}
+
+function roomSummary() {
+    const environment = game.getEnvironmentStatus();
+    const room = game.environment;
+    return `Room score: ${Math.round(environment.score)}% (${formatTrait(environment.status)})\nTemperature: ${room.temperature.toFixed(0)}°F\nHumidity: ${room.humidity.toFixed(0)}%\nVPD: ${environment.vpd.toFixed(2)} kPa\nLight: ${room.light.toFixed(0)}%\npH: ${room.ph.toFixed(1)}\nEC: ${room.ec.toFixed(1)}`;
+}
+
 function interact() {
     if (!game) return;
     Audio.play('click');
     if (game.location === 'grow_room') {
         if (!game.plant) {
-            showDialog('🌱 Empty Grow Space', 'Your grow space is empty. Plant a seed to get started.');
+            showDialog('🌱 Empty Grow Space', `Your grow space is empty. Plant a seed to get started.\n\n${roomSummary()}\n\nThese are THC RPG simulation values.`);
             return;
         }
         const p = game.plant;
-        showDialog(`🌱 ${p.name}`, `Stage: ${formatStage(p.stage)}\nHealth: ${Math.round(p.health)}%\nMoisture: ${Math.round(p.hydration)}%\nStress: ${Math.round(p.stress)}%\nDevelopment: ${Math.round(p.development)}%`);
+        const traits = p.dominantTraits.length ? p.dominantTraits.map(formatTrait).join(', ') : 'None expressed';
+        showDialog(`🌱 ${p.name}`, `Stage: ${formatStage(p.stage)}\nHealth: ${Math.round(p.health)}%\nMoisture: ${Math.round(p.hydration)}%\nStress: ${Math.round(p.stress)}%\nDevelopment: ${Math.round(p.development)}%\n\nPhenotype ${phenotypeSeedLabel(p.phenotype.seed)}\nVigor: ${Math.round(p.vigor)}%\nYield potential: ${Math.round(p.yieldPotential)}%\nQuality potential: ${Math.round(p.qualityPotential)}%\nResilience: ${Math.round(p.resilience)}%\nFlowering expression: ${p.floweringDays} game days\nDominant traits: ${traits}\n\n${roomSummary()}\n\nRoom values are game simulation controls, not real-world instructions.`);
     } else if (game.location === 'mentor_shop') talkToJenkins();
     else showDialog('🚶 Main Street', 'Choose a connected location below to continue your journey.');
 }
@@ -307,7 +322,7 @@ function plantSeed() {
     const genetics = gameData.genetics[geneticsId];
     Audio.play('plant');
     ensureParticles()?.emit(undefined, undefined, 20, { color: 'hsl(140, 80%, 50%)', size: 5 });
-    showDialog('🌱 Seed Planted!', `${genetics.name} has been planted. Keep its moisture in a healthy range and watch stress as it develops.`, [{ label: '💧 Water', action: waterPlant }]);
+    showDialog('🌱 Seed Planted!', `${genetics.name} has been planted. This individual received phenotype ${phenotypeSeedLabel(game.plant.phenotype.seed)}. Keep the simulation room stable and watch stress as it develops.`, [{ label: '💧 Water', action: waterPlant }]);
     updateUI();
 }
 
@@ -328,7 +343,7 @@ function waterPlant() {
     game.plant.water(15);
     Audio.play('water');
     const hydration = Math.round(game.plant.hydration);
-    const message = hydration > 92 ? 'The medium is very wet. More water can increase stress.' : hydration >= 45 ? 'Moisture is in a healthy range.' : 'The plant is still dry and may need attention.';
+    const message = hydration > 92 ? 'The medium is very wet. More water can increase stress.' : hydration >= 45 ? 'Moisture is in a healthy game range.' : 'The plant is still dry and may need attention.';
     showDialog('💧 Watering', `Moisture: ${hydration}%\n\n${message}`);
     updateUI();
 }
@@ -475,14 +490,129 @@ function renderScene() {
     renderTravelOptions(loc?.exits || []);
 }
 
+function makeProfileItem(label, value) {
+    const item = document.createElement('div');
+    item.className = 'profile-item';
+    const key = document.createElement('span');
+    key.className = 'profile-label';
+    key.textContent = label;
+    const result = document.createElement('strong');
+    result.className = 'profile-value';
+    result.textContent = value;
+    item.append(key, result);
+    return item;
+}
+
+function renderPhenotypeProfile(plant) {
+    const profile = document.createElement('section');
+    profile.className = 'phenotype-profile';
+    const header = document.createElement('div');
+    header.className = 'profile-heading';
+    header.textContent = `🧬 Phenotype ${phenotypeSeedLabel(plant.phenotype.seed)}`;
+    const grid = document.createElement('div');
+    grid.className = 'profile-grid';
+    grid.append(
+        makeProfileItem('Vigor', `${Math.round(plant.vigor)}%`),
+        makeProfileItem('Yield', `${Math.round(plant.yieldPotential)}%`),
+        makeProfileItem('Quality', `${Math.round(plant.qualityPotential)}%`),
+        makeProfileItem('Resilience', `${Math.round(plant.resilience)}%`),
+        makeProfileItem('Flower', `${plant.floweringDays}d`)
+    );
+    profile.append(header, grid);
+
+    const traitRow = document.createElement('div');
+    traitRow.className = 'trait-row';
+    for (const trait of plant.dominantTraits) {
+        const chip = document.createElement('span');
+        chip.className = 'trait-chip';
+        chip.textContent = formatTrait(trait);
+        traitRow.append(chip);
+    }
+    if (!plant.dominantTraits.length) {
+        const chip = document.createElement('span');
+        chip.className = 'trait-chip muted';
+        chip.textContent = 'No dominant traits';
+        traitRow.append(chip);
+    }
+    profile.append(traitRow);
+    return profile;
+}
+
+function addEnvironmentControl(container, field, label, value, delta, unit = '') {
+    const row = document.createElement('div');
+    row.className = 'environment-row';
+    const name = document.createElement('span');
+    name.className = 'environment-label';
+    name.textContent = label;
+    const controls = document.createElement('div');
+    controls.className = 'environment-controls';
+    const decrease = document.createElement('button');
+    decrease.type = 'button';
+    decrease.className = 'env-step';
+    decrease.dataset.envField = field;
+    decrease.dataset.envDelta = String(-delta);
+    decrease.setAttribute('aria-label', `Decrease ${label}`);
+    decrease.textContent = '−';
+    const current = document.createElement('strong');
+    current.className = 'environment-value';
+    current.textContent = `${value}${unit}`;
+    const increase = document.createElement('button');
+    increase.type = 'button';
+    increase.className = 'env-step';
+    increase.dataset.envField = field;
+    increase.dataset.envDelta = String(delta);
+    increase.setAttribute('aria-label', `Increase ${label}`);
+    increase.textContent = '+';
+    controls.append(decrease, current, increase);
+    row.append(name, controls);
+    container.append(row);
+}
+
+function renderEnvironmentPanel() {
+    const status = game.getEnvironmentStatus();
+    const room = game.environment;
+    const card = document.createElement('section');
+    card.className = `environment-card status-${status.status}`;
+
+    const header = document.createElement('div');
+    header.className = 'environment-header';
+    const title = document.createElement('div');
+    title.innerHTML = '<strong>🎛️ Grow Room</strong><span>Game simulation controls</span>';
+    const score = document.createElement('div');
+    score.className = `environment-score ${status.status}`;
+    score.innerHTML = `<strong>${Math.round(status.score)}%</strong><span>${formatTrait(status.status)}</span>`;
+    header.append(title, score);
+
+    const vpd = document.createElement('div');
+    vpd.className = 'vpd-readout';
+    vpd.textContent = `Air balance • VPD ${status.vpd.toFixed(2)} kPa`;
+
+    const controls = document.createElement('div');
+    controls.className = 'environment-grid';
+    addEnvironmentControl(controls, 'temperature', 'Temperature', room.temperature.toFixed(0), 2, '°F');
+    addEnvironmentControl(controls, 'humidity', 'Humidity', room.humidity.toFixed(0), 5, '%');
+    addEnvironmentControl(controls, 'light', 'Light', room.light.toFixed(0), 5, '%');
+    addEnvironmentControl(controls, 'ph', 'pH', room.ph.toFixed(1), 0.1);
+    addEnvironmentControl(controls, 'ec', 'EC', room.ec.toFixed(1), 0.1);
+
+    const note = document.createElement('p');
+    note.className = 'simulation-note';
+    note.textContent = 'These values tune THC RPG gameplay and are not real-world cultivation instructions.';
+
+    card.append(header, vpd, controls, note);
+    refs.sceneContent.append(card);
+}
+
 function renderGrowRoom() {
     if (!game.plant) {
         const empty = document.createElement('div');
         empty.className = 'empty-space';
         empty.innerHTML = '<span class="icon">🌱</span><div class="title">Empty Grow Space</div><div class="subtitle">Plant a seed to begin</div>';
         refs.sceneContent.append(empty);
+        renderEnvironmentPanel();
         return;
     }
+
     const p = game.plant;
     const emojis = p.genetics.stageEmojis || {};
     const isReady = p.stage === 'harvest_ready';
@@ -501,9 +631,12 @@ function renderGrowRoom() {
             <div class="plant-stat">💧 Moisture <span class="stat-value">${Math.round(p.hydration)}%</span><div class="stat-bar"><div class="stat-bar-fill ${moistureColor}" style="width:${Math.round(p.hydration)}%"></div></div></div>
             <div class="plant-stat">⚠️ Stress <span class="stat-value">${Math.round(p.stress)}%</span><div class="stat-bar"><div class="stat-bar-fill ${p.stress < 25 ? 'good' : p.stress < 60 ? 'warning' : 'danger'}" style="width:${Math.round(p.stress)}%"></div></div></div>
             <div class="plant-stat">📈 Growth <span class="stat-value">${Math.round(p.development)}%</span><div class="stat-bar"><div class="stat-bar-fill good" style="width:${Math.round(p.development)}%"></div></div></div>
+            <div class="plant-stat">🏠 Room <span class="stat-value">${Math.round(p.environmentScore)}%</span><div class="stat-bar"><div class="stat-bar-fill ${p.environmentScore >= 75 ? 'good' : p.environmentScore >= 45 ? 'warning' : 'danger'}" style="width:${Math.round(p.environmentScore)}%"></div></div></div>
         </div>`;
     card.querySelector('.plant-name').textContent = p.name;
+    card.append(renderPhenotypeProfile(p));
     refs.sceneContent.append(card);
+    renderEnvironmentPanel();
 }
 
 function renderTravelOptions(exits) {
@@ -546,6 +679,18 @@ function updateUI() {
     renderScene();
 }
 
+function adjustRoomControl(control) {
+    if (!game || game.location !== 'grow_room') return;
+    const field = control.dataset.envField;
+    const delta = Number(control.dataset.envDelta);
+    if (!field || !Number.isFinite(delta)) return;
+    const current = Number(game.environment[field]);
+    const next = Number((current + delta).toFixed(2));
+    if (!game.setEnvironment(field, next)) return;
+    Audio.play('click');
+    updateUI();
+}
+
 function bindEvents() {
     refs.startBtn.addEventListener('click', startNewGame);
     refs.loadBtn.addEventListener('click', loadGame);
@@ -558,6 +703,11 @@ function bindEvents() {
     refs.dialogClose.addEventListener('click', closeDialog);
     refs.inventoryClose.addEventListener('click', closeInventory);
     refs.sceneContent.addEventListener('click', event => {
+        const envControl = event.target.closest('[data-env-field]');
+        if (envControl) {
+            adjustRoomControl(envControl);
+            return;
+        }
         const travel = event.target.closest('[data-travel]');
         if (travel) travelTo(travel.dataset.travel);
         else if (event.target.closest('[data-action]')?.dataset.action === 'talk-jenkins') talkToJenkins();
