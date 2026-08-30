@@ -1,0 +1,604 @@
+import { Game } from './game/Game.js';
+
+const SAVE_KEY = 'thc-rpg-save';
+const UPDATE_INTERVAL_MS = 3000;
+
+let gameData = null;
+let game = null;
+let particles = null;
+let updateTimer = null;
+let lastFocusedElement = null;
+
+const $ = id => document.getElementById(id);
+const refs = {
+    app: $('app'), loading: $('loading'), loadBar: $('loadBar'), loadText: $('loadText'), loadError: $('loadError'),
+    startModal: $('startModal'), nameInput: $('nameInput'), startBtn: $('startBtn'), loadBtn: $('loadBtn'),
+    dialogModal: $('dialogModal'), dialogTitle: $('dialogTitle'), dialogText: $('dialogText'), dialogChoices: $('dialogChoices'), dialogClose: $('dialogClose'),
+    inventoryModal: $('inventoryModal'), inventoryList: $('inventoryList'), inventoryClose: $('inventoryClose'),
+    playerName: $('playerName'), playerLevel: $('playerLevel'), playerXp: $('playerXp'), xpBar: $('xpBar'), playerMoney: $('playerMoney'),
+    plantStatus: $('plantStatus'), plantHealth: $('plantHealth'), btnInteract: $('btnInteract'), btnPlant: $('btnPlant'), btnWater: $('btnWater'), btnHarvest: $('btnHarvest'),
+    btnInventory: $('btnInventory'), btnSave: $('btnSave'), sceneContent: $('sceneContent'), particleCanvas: $('particleCanvas')
+};
+
+const Audio = {
+    ctx: null,
+    enabled: true,
+    init() {
+        if (this.ctx || !this.enabled) return;
+        try {
+            const Context = window.AudioContext || window.webkitAudioContext;
+            if (!Context) throw new Error('Web Audio unavailable');
+            this.ctx = new Context();
+        } catch {
+            this.enabled = false;
+        }
+    },
+    play(type = 'click') {
+        this.init();
+        if (!this.enabled || !this.ctx) return;
+        try {
+            void this.ctx.resume();
+            const sounds = {
+                click: { freq: 600, dur: 0.08, vol: 0.08 }, plant: { freq: 400, dur: 0.2, vol: 0.10 },
+                water: { freq: 300, dur: 0.15, vol: 0.07 }, harvest: { freq: 800, dur: 0.3, vol: 0.10 }, levelup: { freq: 500, dur: 0.4, vol: 0.12 }
+            };
+            const s = sounds[type] || sounds.click;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.frequency.value = s.freq;
+            gain.gain.setValueAtTime(s.vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + s.dur);
+            osc.start(this.ctx.currentTime);
+            osc.stop(this.ctx.currentTime + s.dur);
+        } catch {
+            // Audio is non-critical.
+        }
+    }
+};
+
+class Particles {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.parts = [];
+        this.raf = null;
+        this.ambientTimer = null;
+        this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.resize = this.resize.bind(this);
+        this.loop = this.loop.bind(this);
+        window.addEventListener('resize', this.resize, { passive: true });
+        this.resize();
+    }
+
+    resize() {
+        const rect = this.canvas.parentElement?.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.w = Math.max(1, rect?.width || window.innerWidth);
+        this.h = Math.max(1, rect?.height || window.innerHeight);
+        this.canvas.width = Math.floor(this.w * dpr);
+        this.canvas.height = Math.floor(this.h * dpr);
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    emit(x, y, count, opts = {}) {
+        if (this.reducedMotion) return;
+        for (let i = 0; i < count; i += 1) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (opts.speed ?? 2) + Math.random() * 2;
+            this.parts.push({
+                x: x ?? this.w / 2, y: y ?? this.h / 2,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - (opts.upward ? 1.5 : 0),
+                life: 1, decay: 0.008 + Math.random() * 0.015, size: (opts.size ?? 4) + Math.random() * 4,
+                color: opts.color || `hsl(${120 + Math.random() * 40}, 70%, 55%)`, gravity: opts.gravity ?? 0.02
+            });
+        }
+    }
+
+    update() {
+        for (let i = this.parts.length - 1; i >= 0; i -= 1) {
+            const p = this.parts[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.life -= p.decay;
+            if (p.life <= 0) this.parts.splice(i, 1);
+        }
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.w, this.h);
+        for (const p of this.parts) {
+            this.ctx.globalAlpha = p.life * 0.6;
+            this.ctx.fillStyle = p.color;
+            this.ctx.shadowColor = p.color;
+            this.ctx.shadowBlur = 15;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size * p.life * 0.7, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        this.ctx.globalAlpha = 1;
+        this.ctx.shadowBlur = 0;
+    }
+
+    loop() {
+        this.update();
+        this.render();
+        this.raf = requestAnimationFrame(this.loop);
+    }
+
+    start() {
+        if (this.reducedMotion || this.raf) return;
+        this.raf = requestAnimationFrame(this.loop);
+        this.ambientTimer = window.setInterval(() => {
+            if (document.hidden || this.parts.length >= 40 || Math.random() <= 0.7) return;
+            this.emit(Math.random() * this.w, this.h * 0.85, 2, { upward: true, size: 2, speed: 0.5, color: `hsla(${140 + Math.random() * 40}, 50%, 50%, 0.2)` });
+        }, 800);
+    }
+}
+
+function setLoading(percent, text) {
+    refs.loadBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    refs.loadText.textContent = text;
+}
+
+function showFatalError(message) {
+    refs.loadText.textContent = 'THC RPG could not start.';
+    refs.loadError.style.display = 'block';
+    refs.loadError.textContent = message;
+}
+
+async function loadGameData() {
+    const url = new URL('./data/game-data.json', import.meta.url);
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Game data failed to load (${response.status}).`);
+    const data = await response.json();
+    if (!data?.genetics || !data?.locations || !data?.quests) throw new Error('Game data is missing required sections.');
+    return data;
+}
+
+function ensureParticles() {
+    if (!particles && refs.particleCanvas) {
+        particles = new Particles(refs.particleCanvas);
+        particles.start();
+    }
+    return particles;
+}
+
+function startUpdateLoop() {
+    if (updateTimer) clearInterval(updateTimer);
+    updateTimer = setInterval(() => {
+        if (!game || !game.plant || document.hidden) return;
+        game.update(Date.now());
+        updateUI();
+    }, UPDATE_INTERVAL_MS);
+}
+
+function startNewGame() {
+    const name = refs.nameInput.value.trim() || 'Green Thumb';
+    localStorage.removeItem(SAVE_KEY);
+    game = new Game(name, gameData);
+    refs.startModal.style.display = 'none';
+    ensureParticles();
+    startUpdateLoop();
+    updateUI();
+    Audio.play('click');
+    showDialog('🌱 Welcome, Grower!', `Welcome to THC RPG, ${name}!\n\nOld Man Jenkins has a task for you. Visit the Mentor Shop to get started.`, [
+        { label: '🚶 Go to Main Street', action: () => travelTo('main_street') }
+    ]);
+}
+
+function loadGame() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) {
+        showDialog('❌ No Save', 'No saved game was found in this browser.');
+        return;
+    }
+    try {
+        const data = JSON.parse(raw);
+        game = new Game(data.player?.name || 'Green Thumb', gameData);
+        game.load(data);
+        refs.startModal.style.display = 'none';
+        ensureParticles();
+        startUpdateLoop();
+        updateUI();
+        Audio.play('click');
+        showDialog('📂 Loaded!', 'Your save loaded successfully.');
+    } catch (error) {
+        console.error('Failed to load save:', error);
+        showDialog('❌ Save Error', 'The save data is invalid or from an unsupported version. Your existing save was not overwritten.');
+    }
+}
+
+function saveGame() {
+    if (!game) return;
+    try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(game.save()));
+        Audio.play('click');
+        showDialog('💾 Saved!', 'Game saved successfully.');
+    } catch (error) {
+        console.error('Failed to save:', error);
+        showDialog('❌ Save Error', 'The browser could not save the game.');
+    }
+}
+
+function travelTo(locationId) {
+    if (!game) return false;
+    if (!game.moveTo(locationId)) {
+        showDialog('🚫 Can’t Travel There', 'That location is not connected to your current position.');
+        return false;
+    }
+    Audio.play('click');
+    updateUI();
+    return true;
+}
+
+function talkToJenkins() {
+    if (!game) return;
+    if (game.location !== 'mentor_shop') {
+        showDialog('👴 Old Man Jenkins', 'Jenkins is at the Mentor Shop. Travel there to speak with him.');
+        return;
+    }
+
+    Audio.play('click');
+    const npc = gameData.npcs.old_man_jenkins;
+    if (game.quests.completed.includes('first_seed')) {
+        showDialog(`👴 ${npc.name}`, npc.dialog.harvest_ready.join('\n\n'));
+        return;
+    }
+
+    if (game.quests.active.includes('first_seed')) {
+        if (game.plant?.stage === 'harvest_ready') showDialog(`👴 ${npc.name}`, 'Your Blue Mango is ready. Head back to the grow room and harvest it.');
+        else if (game.plant) showDialog(`👴 ${npc.name}`, npc.dialog.after_plant.join('\n\n'));
+        else showDialog(`👴 ${npc.name}`, 'You have the seed. Head to your grow room and plant it.', [{ label: '🚶 Go to Main Street', action: () => travelTo('main_street') }]);
+        return;
+    }
+
+    if (!game.startQuest('first_seed')) {
+        showDialog(`👴 ${npc.name}`, 'I do not have another task for you yet.');
+        return;
+    }
+
+    game.inventory.add('seed', 'blue_mango', 1);
+    showDialog(`👴 ${npc.name}`, npc.dialog.first_meeting.join('\n\n'), [{ label: '🌱 Accept the Blue Mango seed', action: () => updateUI() }]);
+    updateUI();
+}
+
+function interact() {
+    if (!game) return;
+    Audio.play('click');
+    if (game.location === 'grow_room') {
+        if (!game.plant) {
+            showDialog('🌱 Empty Grow Space', 'Your grow space is empty. Plant a seed to get started.');
+            return;
+        }
+        const p = game.plant;
+        showDialog(`🌱 ${p.name}`, `Stage: ${formatStage(p.stage)}\nHealth: ${Math.round(p.health)}%\nMoisture: ${Math.round(p.hydration)}%\nStress: ${Math.round(p.stress)}%\nDevelopment: ${Math.round(p.development)}%`);
+    } else if (game.location === 'mentor_shop') talkToJenkins();
+    else showDialog('🚶 Main Street', 'Choose a connected location below to continue your journey.');
+}
+
+function getPlantableSeed() {
+    const seeds = game?.inventory.getAll('seed') || {};
+    if ((seeds.blue_mango || 0) > 0) return 'blue_mango';
+    return Object.keys(seeds).find(id => gameData.genetics[id]) || null;
+}
+
+function plantSeed() {
+    if (!game) return;
+    if (game.location !== 'grow_room') {
+        showDialog('🌿 Grow Room Required', 'Travel to your grow room before planting.');
+        return;
+    }
+    if (game.plant) {
+        showDialog('🌿 Already Growing', 'You already have a plant in this grow space.');
+        return;
+    }
+    const geneticsId = getPlantableSeed();
+    if (!geneticsId) {
+        showDialog('❌ No Seeds', 'You do not have a plantable seed. Talk to Old Man Jenkins at the Mentor Shop.');
+        return;
+    }
+    if (!game.plantSeed(geneticsId)) {
+        showDialog('❌ Planting Failed', 'The seed could not be planted.');
+        return;
+    }
+    const genetics = gameData.genetics[geneticsId];
+    Audio.play('plant');
+    ensureParticles()?.emit(undefined, undefined, 20, { color: 'hsl(140, 80%, 50%)', size: 5 });
+    showDialog('🌱 Seed Planted!', `${genetics.name} has been planted. Keep its moisture in a healthy range and watch stress as it develops.`, [{ label: '💧 Water', action: waterPlant }]);
+    updateUI();
+}
+
+function waterPlant() {
+    if (!game) return;
+    if (game.location !== 'grow_room') {
+        showDialog('💧 Grow Room Required', 'Travel to your grow room before watering.');
+        return;
+    }
+    if (!game.plant) {
+        showDialog('🌱 No Plant', 'Plant a seed first.');
+        return;
+    }
+    if (game.plant.stage === 'harvest_ready') {
+        showDialog('🌾 Ready to Harvest', 'This plant is finished growing and ready to harvest.');
+        return;
+    }
+    game.plant.water(15);
+    Audio.play('water');
+    const hydration = Math.round(game.plant.hydration);
+    const message = hydration > 92 ? 'The medium is very wet. More water can increase stress.' : hydration >= 45 ? 'Moisture is in a healthy range.' : 'The plant is still dry and may need attention.';
+    showDialog('💧 Watering', `Moisture: ${hydration}%\n\n${message}`);
+    updateUI();
+}
+
+function harvestPlant() {
+    if (!game) return;
+    if (game.location !== 'grow_room') {
+        showDialog('🌾 Grow Room Required', 'Travel to your grow room before harvesting.');
+        return;
+    }
+    if (!game.plant) {
+        showDialog('🌱 No Plant', 'There is nothing to harvest.');
+        return;
+    }
+    if (game.plant.stage !== 'harvest_ready') {
+        showDialog('⏳ Not Ready', `Your plant is currently in the ${formatStage(game.plant.stage)} stage.`);
+        return;
+    }
+    const result = game.harvest();
+    if (!result) return;
+    const questCompleted = game.completeQuest('first_seed');
+    Audio.play('harvest');
+    ensureParticles()?.emit(undefined, undefined, 30, { color: 'hsl(45, 100%, 50%)', size: 6 });
+    if (questCompleted) Audio.play('levelup');
+    const rewardText = questCompleted ? '\n\nQuest complete: +100 XP, +$50, and 2 Blue Bubblegum seeds.' : '';
+    showDialog('🌾 Harvest Complete!', `Yield: ${result.yield}g\nQuality: ${result.quality}%\nHarvest XP: +${result.xp}\nHarvest value: +$${result.money}${rewardText}`);
+    updateUI();
+}
+
+function formatStage(stage) {
+    return String(stage || '').replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function locationLabel(id) {
+    const loc = gameData.locations[id];
+    return loc ? `${loc.icon || '📍'} ${loc.name}` : id;
+}
+
+function renderInventory() {
+    refs.inventoryList.replaceChildren();
+    const sections = [['seed', '🌱'], ['harvest', '🌾'], ['item', '📦']];
+    let itemCount = 0;
+    for (const [category, icon] of sections) {
+        for (const [id, count] of Object.entries(game.inventory.getAll(category))) {
+            itemCount += 1;
+            const row = document.createElement('div');
+            row.className = 'inv-item';
+            const name = document.createElement('span');
+            name.className = 'name';
+            const data = gameData.genetics[id] || gameData.items[id] || gameData.genetics[id.replace('_harvest', '')];
+            name.textContent = `${icon} ${data?.name || id.replaceAll('_', ' ')}`;
+            const amount = document.createElement('span');
+            amount.className = 'count';
+            amount.textContent = category === 'harvest' ? `${count}g` : `×${count}`;
+            row.append(name, amount);
+            refs.inventoryList.append(row);
+        }
+    }
+    if (itemCount === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'inv-empty';
+        empty.textContent = '📦 Inventory empty';
+        refs.inventoryList.append(empty);
+    }
+    const money = document.createElement('div');
+    money.className = 'inv-item inventory-money';
+    money.innerHTML = '<span class="name">💰 Money</span>';
+    const amount = document.createElement('span');
+    amount.className = 'count';
+    amount.textContent = `$${game.player.money}`;
+    money.append(amount);
+    refs.inventoryList.append(money);
+}
+
+function openInventory() {
+    if (!game) return;
+    Audio.play('click');
+    renderInventory();
+    lastFocusedElement = document.activeElement;
+    refs.inventoryModal.style.display = 'flex';
+    refs.inventoryClose.focus();
+}
+
+function closeInventory() {
+    refs.inventoryModal.style.display = 'none';
+    lastFocusedElement?.focus?.();
+}
+
+function closeDialog() {
+    refs.dialogModal.style.display = 'none';
+    refs.dialogChoices.replaceChildren();
+    lastFocusedElement?.focus?.();
+}
+
+function showDialog(title, text, choices = null) {
+    lastFocusedElement = document.activeElement;
+    refs.dialogTitle.textContent = title;
+    refs.dialogText.textContent = text;
+    refs.dialogChoices.replaceChildren();
+    if (choices?.length) {
+        for (const choice of choices) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = choice.label;
+            button.addEventListener('click', () => {
+                if (!choice.keepOpen) closeDialog();
+                choice.action?.();
+            });
+            refs.dialogChoices.append(button);
+        }
+        refs.dialogClose.style.display = 'none';
+    } else refs.dialogClose.style.display = 'block';
+    refs.dialogModal.style.display = 'flex';
+    requestAnimationFrame(() => (refs.dialogChoices.querySelector('button') || refs.dialogClose)?.focus());
+}
+
+function renderScene() {
+    if (!game) return;
+    refs.sceneContent.replaceChildren();
+    const loc = gameData.locations[game.location];
+    const name = document.createElement('div');
+    name.className = 'location-name';
+    name.textContent = `${loc?.icon || '📍'} ${loc?.name || game.location}`;
+    const description = document.createElement('div');
+    description.className = 'location-desc';
+    description.textContent = loc?.description || '';
+    refs.sceneContent.append(name, description);
+
+    if (game.location === 'grow_room') renderGrowRoom();
+    else if (game.location === 'mentor_shop') {
+        const npc = gameData.npcs.old_man_jenkins;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'npc-card';
+        card.dataset.action = 'talk-jenkins';
+        card.innerHTML = `<span class="npc-emoji">${npc.emoji}</span><span class="npc-name">${npc.name}</span><span class="npc-title">${npc.title}</span><span class="npc-hint">💬 Talk</span>`;
+        refs.sceneContent.append(card);
+    } else {
+        const empty = document.createElement('div');
+        empty.className = 'empty-space';
+        empty.innerHTML = '<span class="icon">🚶</span><div class="title">Cultivation District</div><div class="subtitle">Choose where to go next</div>';
+        refs.sceneContent.append(empty);
+    }
+    renderTravelOptions(loc?.exits || []);
+}
+
+function renderGrowRoom() {
+    if (!game.plant) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-space';
+        empty.innerHTML = '<span class="icon">🌱</span><div class="title">Empty Grow Space</div><div class="subtitle">Plant a seed to begin</div>';
+        refs.sceneContent.append(empty);
+        return;
+    }
+    const p = game.plant;
+    const emojis = p.genetics.stageEmojis || {};
+    const isReady = p.stage === 'harvest_ready';
+    const healthColor = p.health > 70 ? 'good' : p.health > 40 ? 'warning' : 'danger';
+    const moistureColor = p.hydration >= 45 && p.hydration <= 90 ? 'good' : p.hydration >= 25 ? 'warning' : 'danger';
+    const card = document.createElement('div');
+    card.className = 'plant-card';
+    card.innerHTML = `
+        <span class="plant-emoji ${isReady ? 'harvest-ready' : ''}">${emojis[p.stage] || '🌱'}</span>
+        <div class="plant-name"></div>
+        <div class="plant-stage-text">${isReady ? '🌾 READY TO HARVEST!' : formatStage(p.stage)}</div>
+        <div class="plant-badge ${p.stage}">${formatStage(p.stage)}</div>
+        <div class="plant-stats">
+            <div class="plant-stat">❤️ Health <span class="stat-value">${Math.round(p.health)}%</span><div class="stat-bar"><div class="stat-bar-fill ${healthColor}" style="width:${Math.round(p.health)}%"></div></div></div>
+            <div class="plant-stat">💪 Vigor <span class="stat-value">${Math.round(p.vigor)}%</span><div class="stat-bar"><div class="stat-bar-fill good" style="width:${Math.round(p.vigor)}%"></div></div></div>
+            <div class="plant-stat">💧 Moisture <span class="stat-value">${Math.round(p.hydration)}%</span><div class="stat-bar"><div class="stat-bar-fill ${moistureColor}" style="width:${Math.round(p.hydration)}%"></div></div></div>
+            <div class="plant-stat">⚠️ Stress <span class="stat-value">${Math.round(p.stress)}%</span><div class="stat-bar"><div class="stat-bar-fill ${p.stress < 25 ? 'good' : p.stress < 60 ? 'warning' : 'danger'}" style="width:${Math.round(p.stress)}%"></div></div></div>
+            <div class="plant-stat">📈 Growth <span class="stat-value">${Math.round(p.development)}%</span><div class="stat-bar"><div class="stat-bar-fill good" style="width:${Math.round(p.development)}%"></div></div></div>
+        </div>`;
+    card.querySelector('.plant-name').textContent = p.name;
+    refs.sceneContent.append(card);
+}
+
+function renderTravelOptions(exits) {
+    if (!exits.length) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'travel-list';
+    for (const exit of exits) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'travel-button';
+        button.dataset.travel = exit;
+        button.textContent = locationLabel(exit);
+        wrapper.append(button);
+    }
+    refs.sceneContent.append(wrapper);
+}
+
+function updateUI() {
+    if (!game) return;
+    const p = game.player;
+    refs.playerName.textContent = p.name;
+    refs.playerLevel.textContent = String(p.level);
+    refs.playerXp.textContent = `${Math.floor(p.xp)} / ${p.xpToNext}`;
+    refs.xpBar.style.width = `${Math.min(100, (p.xp / p.xpToNext) * 100)}%`;
+    refs.playerMoney.textContent = `$${p.money}`;
+    if (game.plant) {
+        const emoji = game.plant.genetics.stageEmojis?.[game.plant.stage] || '🌱';
+        refs.plantStatus.textContent = `${emoji} ${formatStage(game.plant.stage)}`;
+        refs.plantHealth.textContent = `${Math.round(game.plant.health)}%`;
+        refs.plantHealth.style.color = game.plant.health > 70 ? '#2ecc71' : game.plant.health > 40 ? '#f1c40f' : '#e74c3c';
+    } else {
+        refs.plantStatus.textContent = '🌰 None';
+        refs.plantHealth.textContent = '—';
+        refs.plantHealth.style.color = '#6a6a8a';
+    }
+    const inGrowRoom = game.location === 'grow_room';
+    refs.btnPlant.disabled = !inGrowRoom || Boolean(game.plant) || !getPlantableSeed();
+    refs.btnWater.disabled = !inGrowRoom || !game.plant || game.plant.stage === 'harvest_ready';
+    refs.btnHarvest.disabled = !inGrowRoom || game.plant?.stage !== 'harvest_ready';
+    renderScene();
+}
+
+function bindEvents() {
+    refs.startBtn.addEventListener('click', startNewGame);
+    refs.loadBtn.addEventListener('click', loadGame);
+    refs.btnInteract.addEventListener('click', interact);
+    refs.btnPlant.addEventListener('click', plantSeed);
+    refs.btnWater.addEventListener('click', waterPlant);
+    refs.btnHarvest.addEventListener('click', harvestPlant);
+    refs.btnInventory.addEventListener('click', openInventory);
+    refs.btnSave.addEventListener('click', saveGame);
+    refs.dialogClose.addEventListener('click', closeDialog);
+    refs.inventoryClose.addEventListener('click', closeInventory);
+    refs.sceneContent.addEventListener('click', event => {
+        const travel = event.target.closest('[data-travel]');
+        if (travel) travelTo(travel.dataset.travel);
+        else if (event.target.closest('[data-action]')?.dataset.action === 'talk-jenkins') talkToJenkins();
+    });
+    refs.nameInput.addEventListener('keydown', event => { if (event.key === 'Enter') startNewGame(); });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            if (refs.dialogModal.style.display === 'flex') closeDialog();
+            else if (refs.inventoryModal.style.display === 'flex') closeInventory();
+            return;
+        }
+        if (!game || event.target instanceof HTMLInputElement || event.ctrlKey || event.metaKey || event.altKey) return;
+        switch (event.key.toLowerCase()) {
+            case 'e': interact(); break;
+            case 'p': plantSeed(); break;
+            case 'w': waterPlant(); break;
+            case 'h': harvestPlant(); break;
+            case 'i': openInventory(); break;
+            case 's': saveGame(); break;
+            default: break;
+        }
+    });
+}
+
+async function bootstrap() {
+    bindEvents();
+    try {
+        setLoading(15, 'Loading cultivation data...');
+        gameData = await loadGameData();
+        setLoading(65, 'Preparing grow room...');
+        refs.loadBtn.disabled = !localStorage.getItem(SAVE_KEY);
+        refs.app.style.display = 'flex';
+        refs.startModal.style.display = 'flex';
+        setLoading(100, 'Ready to grow! 🌱');
+        await new Promise(resolve => setTimeout(resolve, 150));
+        refs.loading.style.display = 'none';
+        refs.nameInput.focus();
+    } catch (error) {
+        console.error(error);
+        showFatalError(error instanceof Error ? error.message : 'Unknown startup error.');
+    }
+}
+
+void bootstrap();
