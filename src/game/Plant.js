@@ -31,6 +31,7 @@ export class Plant {
         this.stress = 0;
         this.hydration = 80;
         this.development = 0;
+        this.environmentScore = 100;
         this.startTime = now;
         this.lastUpdate = now;
     }
@@ -63,7 +64,7 @@ export class Plant {
         return [...this.phenotype.dominantTraits];
     }
 
-    update(now = Date.now()) {
+    update(now = Date.now(), environment = null) {
         const elapsedSeconds = clamp((now - this.lastUpdate) / 1000, 0, MAX_TICK_SECONDS);
         this.lastUpdate = now;
         this.age = Math.max(0, (now - this.startTime) / 60000);
@@ -85,16 +86,23 @@ export class Plant {
             this.stress = clamp(this.stress - (0.08 * elapsedSeconds));
         }
 
+        if (Number.isFinite(environment?.score)) {
+            this.environmentScore = clamp(environment.score);
+            this.stress = clamp(this.stress + ((environment.stressRate || 0) * resilienceFactor * elapsedSeconds));
+            this.health = clamp(this.health - ((environment.healthDamageRate || 0) * resilienceFactor * elapsedSeconds));
+        }
+
         if (this.hydration < 18 || this.stress > 65) {
             this.health = clamp(this.health - (0.12 * resilienceFactor * elapsedSeconds));
-        } else if (this.hydration >= 45 && this.hydration <= 85 && this.stress < 25) {
+        } else if (this.hydration >= 45 && this.hydration <= 85 && this.stress < 25 && this.environmentScore >= 70) {
             this.health = clamp(this.health + (0.025 * elapsedSeconds));
         }
 
         const hydrationFactor = this.hydration < 25 ? 0.35 : this.hydration > 95 ? 0.65 : 1;
         const stressFactor = Math.max(0.25, 1 - (this.stress / 125));
         const growthTempo = clamp(floweringMidpoint(this.genetics) / this.floweringDays, 0.85, 1.15);
-        const rate = 0.18 * (this.health / 100) * (this.vigor / 100) * hydrationFactor * stressFactor * growthTempo;
+        const environmentGrowth = clamp(environment?.growthModifier ?? 1, 0.25, 1);
+        const rate = 0.18 * (this.health / 100) * (this.vigor / 100) * hydrationFactor * stressFactor * growthTempo * environmentGrowth;
         this.development = clamp(this.development + (rate * elapsedSeconds));
 
         this.updateStage();
@@ -141,6 +149,7 @@ export class Plant {
             stress: this.stress,
             hydration: this.hydration,
             development: this.development,
+            environmentScore: this.environmentScore,
             startTime: this.startTime,
             lastUpdate: this.lastUpdate
         };
@@ -170,6 +179,7 @@ export class Plant {
         p.stress = data?.stress ?? 0;
         p.hydration = data?.hydration ?? 80;
         p.development = data?.development ?? 0;
+        p.environmentScore = data?.environmentScore ?? 100;
         p.startTime = data?.startTime ?? now;
         p.lastUpdate = data?.lastUpdate ?? now;
         p.updateStage();

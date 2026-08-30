@@ -1,5 +1,6 @@
 import { Plant } from './Plant.js';
 import { Inventory } from './Inventory.js';
+import { Environment } from './Environment.js';
 
 const objectiveKey = (objective, index) => objective.id || `${objective.type}:${objective.target || 'any'}:${index}`;
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -20,11 +21,12 @@ export class Game {
             reputation: 0
         };
         this.inventory = new Inventory();
+        this.environment = new Environment();
         this.plant = null;
         this.quests = { active: [], completed: [], progress: {} };
         this.location = 'grow_room';
         this.time = 0;
-        this.saveVersion = 3;
+        this.saveVersion = 4;
 
         this.inventory.add('item', 'basic_soil', 1);
         this.inventory.add('item', 'small_pot', 1);
@@ -36,6 +38,18 @@ export class Game {
         if (current?.exits?.length && !current.exits.includes(loc)) return false;
         this.location = loc;
         return true;
+    }
+
+    setEnvironment(field, value) {
+        return this.environment.set(field, value);
+    }
+
+    adjustEnvironment(field, delta) {
+        return this.environment.adjust(field, delta);
+    }
+
+    getEnvironmentStatus() {
+        return this.environment.evaluate(this.plant?.stage || 'vegetative');
     }
 
     plantSeed(id, phenotypeSeed = undefined) {
@@ -185,7 +199,8 @@ export class Game {
         if (!this.plant) return;
 
         const wasReady = this.plant.stage === 'harvest_ready';
-        this.plant.update(now);
+        const environment = this.environment.evaluate(this.plant.stage);
+        this.plant.update(now, environment);
         if (!wasReady && this.plant.stage === 'harvest_ready') {
             this.recordObjective('reach_growth_stage', 'harvest_ready');
         }
@@ -196,6 +211,7 @@ export class Game {
             version: this.saveVersion,
             player: { ...this.player },
             inventory: this.inventory.save(),
+            environment: this.environment.save(),
             plant: this.plant ? this.plant.save() : null,
             quests: {
                 active: [...this.quests.active],
@@ -208,7 +224,7 @@ export class Game {
     }
 
     load(data) {
-        if (![1, 2, 3].includes(data?.version)) throw new Error('Unsupported save version');
+        if (![1, 2, 3, 4].includes(data?.version)) throw new Error('Unsupported save version');
 
         const defaults = this.player;
         this.player = { ...defaults, ...(data.player || {}) };
@@ -218,6 +234,7 @@ export class Game {
         }
 
         this.inventory.load(data.inventory || {});
+        this.environment = new Environment(data.environment || {});
 
         if (data.plant) {
             const geneticsId = data.plant.geneticsId || data.plant.genetics?.id;
