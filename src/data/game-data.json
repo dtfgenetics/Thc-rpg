@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "genetics": {
     "blue_mango": {
       "id": "blue_mango",
@@ -49,6 +49,21 @@
         { "id": "harvest_first_plant", "type": "harvest_plant", "target": "blue_mango", "required": 1, "description": "Harvest your first Blue Mango plant" }
       ],
       "rewards": { "xp": 100, "money": 50, "items": { "seed": { "blue_bubblegum": 2 } } },
+      "nextQuest": "dial_it_in"
+    },
+    "dial_it_in": {
+      "id": "dial_it_in",
+      "title": "Dial It In",
+      "icon": "🎛️",
+      "description": "Upgrade your setup, stabilize the grow-room simulation, and prove the new Blue Bubblegum genetics through harvest.",
+      "prerequisites": ["first_seed"],
+      "objectives": [
+        { "id": "buy_upgrade", "type": "purchase_equipment", "required": 1, "description": "Own at least one upgraded piece of equipment" },
+        { "id": "stabilize_room", "type": "maintain_environment_status", "target": "good", "required": 3, "description": "Hold a good room score for 3 simulation checks" },
+        { "id": "plant_blue_bubblegum", "type": "plant_seed", "target": "blue_bubblegum", "required": 1, "description": "Plant a Blue Bubblegum seed" },
+        { "id": "harvest_blue_bubblegum", "type": "harvest_plant", "target": "blue_bubblegum", "required": 1, "description": "Harvest Blue Bubblegum" }
+      ],
+      "rewards": { "xp": 150, "money": 100, "items": { "item": { "nutrients": 2 } } },
       "nextQuest": null
     }
   },
@@ -58,57 +73,12 @@
     "nutrients": { "id": "nutrients", "name": "Basic Nutrient Mix", "category": "item", "description": "An introductory nutrient mix used to support plant growth.", "value": 15, "stackable": true, "maxStack": 20, "uses": 5 }
   },
   "equipment": {
-    "starter_fixture": {
-      "id": "starter_fixture",
-      "name": "Starter Fixture",
-      "slot": "lighting",
-      "starter": true,
-      "price": 0,
-      "description": "Basic lighting controls with coarse adjustment.",
-      "controlSteps": { "light": 10 }
-    },
-    "adjustable_fixture": {
-      "id": "adjustable_fixture",
-      "name": "Adjustable Fixture",
-      "slot": "lighting",
-      "price": 75,
-      "description": "An upgraded game fixture with finer light control.",
-      "controlSteps": { "light": 5 }
-    },
-    "basic_ventilation": {
-      "id": "basic_ventilation",
-      "name": "Basic Ventilation",
-      "slot": "climate",
-      "starter": true,
-      "price": 0,
-      "description": "Starter room controls for temperature and humidity.",
-      "controlSteps": { "temperature": 5, "humidity": 10 }
-    },
-    "climate_module": {
-      "id": "climate_module",
-      "name": "Climate Module",
-      "slot": "climate",
-      "price": 90,
-      "description": "A game upgrade that allows finer climate adjustments.",
-      "controlSteps": { "temperature": 2, "humidity": 5 }
-    },
-    "basic_meter": {
-      "id": "basic_meter",
-      "name": "Basic Meter",
-      "slot": "monitoring",
-      "starter": true,
-      "price": 0,
-      "description": "Starter monitoring controls with coarse adjustment.",
-      "controlSteps": { "ph": 0.5, "ec": 0.5 }
-    },
-    "precision_meter": {
-      "id": "precision_meter",
-      "name": "Precision Meter",
-      "slot": "monitoring",
-      "price": 60,
-      "description": "A game monitoring upgrade with finer pH and EC adjustment.",
-      "controlSteps": { "ph": 0.1, "ec": 0.1 }
-    }
+    "starter_fixture": { "id": "starter_fixture", "name": "Starter Fixture", "slot": "lighting", "starter": true, "price": 0, "description": "Basic lighting controls with coarse adjustment.", "controlSteps": { "light": 10 } },
+    "adjustable_fixture": { "id": "adjustable_fixture", "name": "Adjustable Fixture", "slot": "lighting", "price": 75, "description": "An upgraded game fixture with finer light control.", "controlSteps": { "light": 5 } },
+    "basic_ventilation": { "id": "basic_ventilation", "name": "Basic Ventilation", "slot": "climate", "starter": true, "price": 0, "description": "Starter room controls for temperature and humidity.", "controlSteps": { "temperature": 5, "humidity": 10 } },
+    "climate_module": { "id": "climate_module", "name": "Climate Module", "slot": "climate", "price": 90, "description": "A game upgrade that allows finer climate adjustments.", "controlSteps": { "temperature": 2, "humidity": 5 } },
+    "basic_meter": { "id": "basic_meter", "name": "Basic Meter", "slot": "monitoring", "starter": true, "price": 0, "description": "Starter monitoring controls with coarse adjustment.", "controlSteps": { "ph": 0.5, "ec": 0.5 } },
+    "precision_meter": { "id": "precision_meter", "name": "Precision Meter", "slot": "monitoring", "price": 60, "description": "A game monitoring upgrade with finer pH and EC adjustment.", "controlSteps": { "ph": 0.1, "ec": 0.1 } }
   },
   "npcs": {
     "old_man_jenkins": {
@@ -121,7 +91,9 @@
       "dialog": {
         "first_meeting": ["Well, well, a new face!", "I'm Old Man Jenkins. I've spent decades learning how plants respond to their environment.", "If you want to become a grower, we'll start with the fundamentals.", "I've got a Blue Mango seed here that needs a home. Take it.", "Plant it, care for it, learn from it, and bring me your first harvest."],
         "after_plant": ["Good. Getting the seed planted is only the beginning.", "Watch the plant closely. Changes in its leaves and growth can tell you a lot about what it needs."],
-        "harvest_ready": ["Look at that. You brought it all the way through the cycle.", "Your first harvest is an important milestone.", "You've learned the basics. Now we can start getting into the real science."]
+        "first_complete": ["Look at that. You brought it all the way through the cycle.", "Your first harvest is an important milestone.", "Now use what you earned to improve the room and show me what those Blue Bubblegum seeds can do."],
+        "dial_it_in": ["The next lesson is control.", "Upgrade one part of your game setup, hold the room in a good state, then run Blue Bubblegum from seed to harvest.", "The point is not perfect numbers. The point is learning how genetics, environment, and equipment interact."],
+        "all_complete": ["You've proven you can manage more than one genetic line and adapt the room around the plant.", "That's the foundation. The next chapter can get much deeper." ]
       }
     }
   },
