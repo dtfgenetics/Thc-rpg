@@ -82,6 +82,7 @@ export class Game {
         if (!Number.isFinite(price) || price < 0 || this.player.money < price) return false;
         if (!this.equipment.grant(id, true)) return false;
         this.player.money -= price;
+        this.recordObjective('purchase_equipment', id);
         return true;
     }
 
@@ -141,9 +142,24 @@ export class Game {
         return true;
     }
 
+    areQuestPrerequisitesMet(id) {
+        const quest = this.gameData.quests?.[id];
+        if (!quest) return false;
+        return (quest.prerequisites || []).every(prerequisite => this.quests.completed.includes(prerequisite));
+    }
+
+    getAvailableQuests() {
+        return Object.values(this.gameData.quests || {})
+            .filter(quest => !this.quests.active.includes(quest.id))
+            .filter(quest => !this.quests.completed.includes(quest.id))
+            .filter(quest => this.areQuestPrerequisitesMet(quest.id))
+            .map(quest => clone(quest));
+    }
+
     startQuest(id = 'first_seed') {
         const quest = this.gameData.quests?.[id];
         if (!quest || this.quests.completed.includes(id) || this.quests.active.includes(id)) return false;
+        if (!this.areQuestPrerequisitesMet(id)) return false;
 
         this.quests.active.push(id);
         this.quests.progress[id] = {};
@@ -151,13 +167,27 @@ export class Game {
             this.quests.progress[id][objectiveKey(objective, index)] = 0;
         });
 
+        this.syncQuestProgress(id);
+        return true;
+    }
+
+    syncQuestProgress(id) {
+        if (!this.quests.active.includes(id)) return false;
+        const quest = this.gameData.quests?.[id];
+        if (!quest) return false;
+        let changed = false;
+
         if (this.plant) {
-            this.recordObjective('plant_seed', this.plant.geneticsId);
+            changed = this.recordObjective('plant_seed', this.plant.geneticsId) || changed;
             if (this.plant.stage === 'harvest_ready') {
-                this.recordObjective('reach_growth_stage', 'harvest_ready');
+                changed = this.recordObjective('reach_growth_stage', 'harvest_ready') || changed;
             }
         }
-        return true;
+
+        const upgraded = this.equipment.getOwnedDefinitions().find(item => item.starter !== true);
+        if (upgraded) changed = this.recordObjective('purchase_equipment', upgraded.id) || changed;
+
+        return changed;
     }
 
     recordObjective(type, target = null, amount = 1) {
@@ -197,10 +227,21 @@ export class Game {
         });
         return {
             id,
+            title: quest.title,
+            icon: quest.icon,
+            description: quest.description,
+            prerequisites: [...(quest.prerequisites || [])],
+            nextQuest: quest.nextQuest || null,
             active: this.quests.active.includes(id),
             completed: this.quests.completed.includes(id),
             objectives
         };
+    }
+
+    getActiveQuestStates() {
+        return this.quests.active
+            .map(id => this.getQuestProgress(id))
+            .filter(Boolean);
     }
 
     isQuestReady(id = 'first_seed') {
@@ -231,12 +272,21 @@ export class Game {
         return true;
     }
 
+    completeReadyQuests() {
+        const completed = [];
+        for (const questId of [...this.quests.active]) {
+            if (this.completeQuest(questId)) completed.push(questId);
+        }
+        return completed;
+    }
+
     update(now = Date.now()) {
         this.time = now;
         if (!this.plant) return;
 
         const wasReady = this.plant.stage === 'harvest_ready';
         const environment = this.environment.evaluate(this.plant.stage);
+        this.recordObjective('maintain_environment_status', environment.status);
         this.plant.update(now, environment);
         if (!wasReady && this.plant.stage === 'harvest_ready') {
             this.recordObjective('reach_growth_stage', 'harvest_ready');
@@ -286,8 +336,8 @@ export class Game {
 
         const loadedQuests = data.quests || {};
         this.quests = {
-            active: [...new Set(loadedQuests.active || [])],
-            completed: [...new Set(loadedQuests.completed || [])],
+            active: [...new Set(loadedQuests.active || [])].filter(id => this.gameData.quests?.[id]),
+            completed: [...new Set(loadedQuests.completed || [])].filter(id => this.gameData.quests?.[id]),
             progress: clone(loadedQuests.progress || {})
         };
         this.quests.active = this.quests.active.filter(id => !this.quests.completed.includes(id));
@@ -298,6 +348,7 @@ export class Game {
                 const key = objectiveKey(objective, index);
                 if (this.quests.progress[questId][key] == null) this.quests.progress[questId][key] = 0;
             });
+            this.syncQuestProgress(questId);
         }
 
         this.location = this.gameData.locations[data.location] ? data.location : 'grow_room';
