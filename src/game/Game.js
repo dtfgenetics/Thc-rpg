@@ -24,7 +24,7 @@ export class Game {
         this.quests = { active: [], completed: [], progress: {} };
         this.location = 'grow_room';
         this.time = 0;
-        this.saveVersion = 2;
+        this.saveVersion = 3;
 
         this.inventory.add('item', 'basic_soil', 1);
         this.inventory.add('item', 'small_pot', 1);
@@ -38,7 +38,7 @@ export class Game {
         return true;
     }
 
-    plantSeed(id) {
+    plantSeed(id, phenotypeSeed = undefined) {
         if (this.plant) return false;
 
         const genetics = this.gameData.genetics[id];
@@ -46,7 +46,7 @@ export class Game {
         if (!this.inventory.has('seed', id)) return false;
         if (!this.inventory.remove('seed', id)) return false;
 
-        this.plant = new Plant(genetics);
+        this.plant = new Plant(genetics, Date.now(), phenotypeSeed);
         this.recordObjective('plant_seed', id);
         return true;
     }
@@ -208,7 +208,7 @@ export class Game {
     }
 
     load(data) {
-        if (![1, 2].includes(data?.version)) throw new Error('Unsupported save version');
+        if (![1, 2, 3].includes(data?.version)) throw new Error('Unsupported save version');
 
         const defaults = this.player;
         this.player = { ...defaults, ...(data.player || {}) };
