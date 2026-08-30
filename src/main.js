@@ -246,6 +246,41 @@ function travelTo(locationId) {
     return true;
 }
 
+function formatTrait(trait) {
+    return String(trait || '').replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function formatStage(stage) {
+    return String(stage || '').replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function phenotypeSeedLabel(seed) {
+    return `#${Number(seed || 0).toString(16).padStart(8, '0').toUpperCase()}`;
+}
+
+function questObjectiveText(state) {
+    return state.objectives
+        .map(objective => `${objective.completed ? '✅' : '⬜'} ${objective.description}${objective.required > 1 ? ` (${objective.current}/${objective.required})` : ''}`)
+        .join('\n');
+}
+
+function questRewardText(questId) {
+    const quest = gameData.quests?.[questId];
+    if (!quest) return '';
+    const rewards = quest.rewards || {};
+    const parts = [];
+    if (rewards.xp) parts.push(`+${rewards.xp} XP`);
+    if (rewards.money) parts.push(`+$${rewards.money}`);
+    for (const [category, entries] of Object.entries(rewards.items || {})) {
+        for (const [id, count] of Object.entries(entries || {})) {
+            const data = gameData.genetics[id] || gameData.items[id];
+            const label = data?.name || formatTrait(id);
+            parts.push(`${count} ${label}${count === 1 ? '' : category === 'seed' ? ' seeds' : ''}`);
+        }
+    }
+    return parts.join(', ');
+}
+
 function talkToJenkins() {
     if (!game) return;
     if (game.location !== 'mentor_shop') {
@@ -255,36 +290,50 @@ function talkToJenkins() {
 
     Audio.play('click');
     const npc = gameData.npcs.old_man_jenkins;
-    if (game.quests.completed.includes('first_seed')) {
-        showDialog(`👴 ${npc.name}`, npc.dialog.harvest_ready.join('\n\n'));
+    const active = game.getActiveQuestStates();
+
+    if (active.length) {
+        const ready = active.filter(state => state.objectives.every(objective => objective.completed));
+        if (ready.length) {
+            const completed = game.completeReadyQuests();
+            if (completed.length) {
+                Audio.play('levelup');
+                updateUI();
+                const summary = completed.map(id => `${gameData.quests[id].icon || '✅'} ${gameData.quests[id].title}: ${questRewardText(id)}`).join('\n');
+                showDialog(`👴 ${npc.name}`, `Good work. That chapter is complete.\n\n${summary}`);
+                return;
+            }
+        }
+
+        const state = active[0];
+        const intro = state.id === 'first_seed'
+            ? (game.plant ? npc.dialog.after_plant.join('\n\n') : 'You have the seed. Head to your grow room and plant it.')
+            : npc.dialog.dial_it_in.join('\n\n');
+        showDialog(`${state.icon || '📋'} ${state.title}`, `${intro}\n\n${questObjectiveText(state)}`);
         return;
     }
 
-    if (game.quests.active.includes('first_seed')) {
-        if (game.plant?.stage === 'harvest_ready') showDialog(`👴 ${npc.name}`, 'Your Blue Mango is ready. Head back to the grow room and harvest it.');
-        else if (game.plant) showDialog(`👴 ${npc.name}`, npc.dialog.after_plant.join('\n\n'));
-        else showDialog(`👴 ${npc.name}`, 'You have the seed. Head to your grow room and plant it.', [{ label: '🚶 Go to Main Street', action: () => travelTo('main_street') }]);
+    const available = game.getAvailableQuests();
+    if (!available.length) {
+        showDialog(`👴 ${npc.name}`, npc.dialog.all_complete.join('\n\n'));
         return;
     }
 
-    if (!game.startQuest('first_seed')) {
+    const quest = available[0];
+    if (!game.startQuest(quest.id)) {
         showDialog(`👴 ${npc.name}`, 'I do not have another task for you yet.');
         return;
     }
 
-    game.inventory.add('seed', 'blue_mango', 1);
-    showDialog(`👴 ${npc.name}`, npc.dialog.first_meeting.join('\n\n'), [
-        { label: '🌱 Accept the Blue Mango seed', action: () => updateUI() }
-    ]);
+    if (quest.id === 'first_seed') {
+        game.inventory.add('seed', 'blue_mango', 1);
+        showDialog(`👴 ${npc.name}`, npc.dialog.first_meeting.join('\n\n'), [
+            { label: '🌱 Accept the Blue Mango seed', action: () => updateUI() }
+        ]);
+    } else {
+        showDialog(`${quest.icon || '📋'} ${quest.title}`, `${npc.dialog.dial_it_in.join('\n\n')}\n\n${questObjectiveText(game.getQuestProgress(quest.id))}`);
+    }
     updateUI();
-}
-
-function formatTrait(trait) {
-    return String(trait || '').replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
-}
-
-function phenotypeSeedLabel(seed) {
-    return `#${Number(seed || 0).toString(16).padStart(8, '0').toUpperCase()}`;
 }
 
 function roomSummary() {
@@ -310,6 +359,11 @@ function interact() {
 
 function getPlantableSeed() {
     const seeds = game?.inventory.getAll('seed') || {};
+    const activeStates = game?.getActiveQuestStates?.() || [];
+    const requested = activeStates
+        .flatMap(state => state.objectives)
+        .find(objective => objective.type === 'plant_seed' && !objective.completed && objective.target)?.target;
+    if (requested && (seeds[requested] || 0) > 0) return requested;
     if ((seeds.blue_mango || 0) > 0) return 'blue_mango';
     return Object.keys(seeds).find(id => gameData.genetics[id]) || null;
 }
@@ -380,17 +434,15 @@ function harvestPlant() {
     }
     const result = game.harvest();
     if (!result) return;
-    const questCompleted = game.completeQuest('first_seed');
+    const completed = game.completeReadyQuests();
     Audio.play('harvest');
     ensureParticles()?.emit(undefined, undefined, 30, { color: 'hsl(45, 100%, 50%)', size: 6 });
-    if (questCompleted) Audio.play('levelup');
-    const rewardText = questCompleted ? '\n\nQuest complete: +100 XP, +$50, and 2 Blue Bubblegum seeds.' : '';
+    if (completed.length) Audio.play('levelup');
+    const rewardText = completed.length
+        ? `\n\n${completed.map(id => `Quest complete — ${gameData.quests[id].title}: ${questRewardText(id)}`).join('\n')}`
+        : '';
     showDialog('🌾 Harvest Complete!', `Yield: ${result.yield}g\nQuality: ${result.quality}%\nHarvest XP: +${result.xp}\nHarvest value: +$${result.money}${rewardText}`);
     updateUI();
-}
-
-function formatStage(stage) {
-    return String(stage || '').replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
 function locationLabel(id) {
@@ -536,7 +588,6 @@ function renderEquipmentShop() {
     for (const item of catalog) {
         const row = document.createElement('div');
         row.className = 'environment-row';
-
         const info = document.createElement('div');
         info.className = 'environment-label';
         const name = document.createElement('strong');
@@ -564,7 +615,6 @@ function renderEquipmentShop() {
             action.disabled = game.player.money < Number(item.price);
             if (action.disabled) action.title = `Need $${item.price}`;
         }
-
         row.append(info, action);
         list.append(row);
     }
@@ -575,6 +625,46 @@ function renderEquipmentShop() {
     disclaimer.textContent = 'Equipment values are THC RPG progression mechanics, not real-world cultivation specifications.';
     shop.append(disclaimer);
     refs.sceneContent.append(shop);
+}
+
+function renderQuestTracker() {
+    const active = game.getActiveQuestStates();
+    if (!active.length) return;
+
+    const state = active[0];
+    const tracker = document.createElement('section');
+    tracker.className = 'environment-card';
+    const header = document.createElement('div');
+    header.className = 'environment-header';
+    const title = document.createElement('div');
+    title.innerHTML = `<strong>${state.icon || '📋'} ${state.title}</strong><span>Active quest</span>`;
+    const completedCount = state.objectives.filter(objective => objective.completed).length;
+    const score = document.createElement('div');
+    score.className = `environment-score ${completedCount === state.objectives.length ? 'good' : 'warning'}`;
+    score.innerHTML = `<strong>${completedCount}/${state.objectives.length}</strong><span>Objectives</span>`;
+    header.append(title, score);
+    tracker.append(header);
+
+    const list = document.createElement('div');
+    list.className = 'environment-grid';
+    for (const objective of state.objectives) {
+        const row = document.createElement('div');
+        row.className = 'environment-row';
+        const label = document.createElement('div');
+        label.className = 'environment-label';
+        const name = document.createElement('strong');
+        name.textContent = `${objective.completed ? '✅' : '⬜'} ${objective.description}`;
+        name.style.display = 'block';
+        name.style.color = objective.completed ? 'var(--primary)' : 'var(--text-primary)';
+        label.append(name);
+        const progress = document.createElement('strong');
+        progress.className = 'environment-value';
+        progress.textContent = `${objective.current}/${objective.required}`;
+        row.append(label, progress);
+        list.append(row);
+    }
+    tracker.append(list);
+    refs.sceneContent.append(tracker);
 }
 
 function renderScene() {
@@ -588,6 +678,7 @@ function renderScene() {
     description.className = 'location-desc';
     description.textContent = loc?.description || '';
     refs.sceneContent.append(name, description);
+    renderQuestTracker();
 
     if (game.location === 'grow_room') renderGrowRoom();
     else if (game.location === 'mentor_shop') {
