@@ -1,4 +1,5 @@
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+const MAX_TICK_SECONDS = 30;
 
 export class Plant {
     constructor(genetics, now = Date.now()) {
@@ -19,7 +20,7 @@ export class Plant {
     }
 
     update(now = Date.now()) {
-        const elapsedSeconds = clamp((now - this.lastUpdate) / 1000, 0, 30);
+        const elapsedSeconds = clamp((now - this.lastUpdate) / 1000, 0, MAX_TICK_SECONDS);
         this.lastUpdate = now;
         this.age = Math.max(0, (now - this.startTime) / 60000);
 
@@ -99,7 +100,8 @@ export class Plant {
         const sourceGenetics = genetics || data?.genetics;
         if (!sourceGenetics?.id) throw new Error('Cannot load plant without genetics');
 
-        const p = new Plant(sourceGenetics, data.startTime ?? Date.now());
+        const now = Date.now();
+        const p = new Plant(sourceGenetics, data.startTime ?? now);
         p.stage = data.stage ?? 'seed';
         p.age = data.age ?? 0;
         p.health = data.health ?? 100;
@@ -107,8 +109,8 @@ export class Plant {
         p.stress = data.stress ?? 0;
         p.hydration = data.hydration ?? 80;
         p.development = data.development ?? 0;
-        p.startTime = data.startTime ?? Date.now();
-        p.lastUpdate = data.lastUpdate ?? Date.now();
+        p.startTime = data.startTime ?? now;
+        p.lastUpdate = data.lastUpdate ?? now;
         p.updateStage();
         return p;
     }
