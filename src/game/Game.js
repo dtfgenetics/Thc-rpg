@@ -1,6 +1,7 @@
 import { Plant } from './Plant.js';
 import { Inventory } from './Inventory.js';
 import { Environment } from './Environment.js';
+import { Equipment } from './Equipment.js';
 
 const objectiveKey = (objective, index) => objective.id || `${objective.type}:${objective.target || 'any'}:${index}`;
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -22,11 +23,12 @@ export class Game {
         };
         this.inventory = new Inventory();
         this.environment = new Environment();
+        this.equipment = new Equipment(this.gameData.equipment || {});
         this.plant = null;
         this.quests = { active: [], completed: [], progress: {} };
         this.location = 'grow_room';
         this.time = 0;
-        this.saveVersion = 4;
+        this.saveVersion = 5;
 
         this.inventory.add('item', 'basic_soil', 1);
         this.inventory.add('item', 'small_pot', 1);
@@ -48,8 +50,43 @@ export class Game {
         return this.environment.adjust(field, delta);
     }
 
+    getEnvironmentControlStep(field) {
+        return this.equipment.getControlStep(field);
+    }
+
+    nudgeEnvironment(field, direction) {
+        if (direction !== -1 && direction !== 1) return false;
+        const step = this.getEnvironmentControlStep(field);
+        if (!Number.isFinite(step)) return false;
+        const current = Number(this.environment[field]);
+        if (!Number.isFinite(current)) return false;
+        return this.setEnvironment(field, Number((current + (step * direction)).toFixed(2)));
+    }
+
     getEnvironmentStatus() {
         return this.environment.evaluate(this.plant?.stage || 'vegetative');
+    }
+
+    getEquipmentCatalog() {
+        return Object.values(this.gameData.equipment || {}).map(definition => ({
+            ...clone(definition),
+            owned: this.equipment.has(definition.id),
+            equipped: this.equipment.equipped[definition.slot] === definition.id
+        }));
+    }
+
+    purchaseEquipment(id) {
+        const definition = this.equipment.get(id);
+        if (!definition || this.equipment.has(id)) return false;
+        const price = Number(definition.price);
+        if (!Number.isFinite(price) || price < 0 || this.player.money < price) return false;
+        if (!this.equipment.grant(id, true)) return false;
+        this.player.money -= price;
+        return true;
+    }
+
+    equipEquipment(id) {
+        return this.equipment.equip(id);
     }
 
     plantSeed(id, phenotypeSeed = undefined) {
@@ -212,6 +249,7 @@ export class Game {
             player: { ...this.player },
             inventory: this.inventory.save(),
             environment: this.environment.save(),
+            equipment: this.equipment.save(),
             plant: this.plant ? this.plant.save() : null,
             quests: {
                 active: [...this.quests.active],
@@ -224,7 +262,7 @@ export class Game {
     }
 
     load(data) {
-        if (![1, 2, 3, 4].includes(data?.version)) throw new Error('Unsupported save version');
+        if (![1, 2, 3, 4, 5].includes(data?.version)) throw new Error('Unsupported save version');
 
         const defaults = this.player;
         this.player = { ...defaults, ...(data.player || {}) };
@@ -235,6 +273,8 @@ export class Game {
 
         this.inventory.load(data.inventory || {});
         this.environment = new Environment(data.environment || {});
+        this.equipment = new Equipment(this.gameData.equipment || {});
+        this.equipment.load(data.equipment || {});
 
         if (data.plant) {
             const geneticsId = data.plant.geneticsId || data.plant.genetics?.id;

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "genetics": {
     "blue_mango": {
       "id": "blue_mango",
@@ -57,6 +57,59 @@
     "small_pot": { "id": "small_pot", "name": "Small Pot", "category": "item", "description": "A starter container suitable for seedlings and small plants.", "value": 5, "stackable": true, "maxStack": 10 },
     "nutrients": { "id": "nutrients", "name": "Basic Nutrient Mix", "category": "item", "description": "An introductory nutrient mix used to support plant growth.", "value": 15, "stackable": true, "maxStack": 20, "uses": 5 }
   },
+  "equipment": {
+    "starter_fixture": {
+      "id": "starter_fixture",
+      "name": "Starter Fixture",
+      "slot": "lighting",
+      "starter": true,
+      "price": 0,
+      "description": "Basic lighting controls with coarse adjustment.",
+      "controlSteps": { "light": 10 }
+    },
+    "adjustable_fixture": {
+      "id": "adjustable_fixture",
+      "name": "Adjustable Fixture",
+      "slot": "lighting",
+      "price": 75,
+      "description": "An upgraded game fixture with finer light control.",
+      "controlSteps": { "light": 5 }
+    },
+    "basic_ventilation": {
+      "id": "basic_ventilation",
+      "name": "Basic Ventilation",
+      "slot": "climate",
+      "starter": true,
+      "price": 0,
+      "description": "Starter room controls for temperature and humidity.",
+      "controlSteps": { "temperature": 5, "humidity": 10 }
+    },
+    "climate_module": {
+      "id": "climate_module",
+      "name": "Climate Module",
+      "slot": "climate",
+      "price": 90,
+      "description": "A game upgrade that allows finer climate adjustments.",
+      "controlSteps": { "temperature": 2, "humidity": 5 }
+    },
+    "basic_meter": {
+      "id": "basic_meter",
+      "name": "Basic Meter",
+      "slot": "monitoring",
+      "starter": true,
+      "price": 0,
+      "description": "Starter monitoring controls with coarse adjustment.",
+      "controlSteps": { "ph": 0.5, "ec": 0.5 }
+    },
+    "precision_meter": {
+      "id": "precision_meter",
+      "name": "Precision Meter",
+      "slot": "monitoring",
+      "price": 60,
+      "description": "A game monitoring upgrade with finer pH and EC adjustment.",
+      "controlSteps": { "ph": 0.1, "ec": 0.1 }
+    }
+  },
   "npcs": {
     "old_man_jenkins": {
       "id": "old_man_jenkins",
@@ -74,7 +127,7 @@
   },
   "locations": {
     "grow_room": { "id": "grow_room", "name": "Grow Room", "icon": "🌱", "description": "Your starter cultivation space and home base.", "type": "cultivation", "exits": ["main_street"], "npcs": [], "features": ["planting", "watering", "plant_inspection"] },
-    "mentor_shop": { "id": "mentor_shop", "name": "Mentor Shop", "icon": "📦", "description": "Old Man Jenkins' shop, filled with genetics, supplies, and cultivation knowledge.", "type": "shop", "exits": ["main_street"], "npcs": ["old_man_jenkins"], "features": ["dialog", "quests"] },
+    "mentor_shop": { "id": "mentor_shop", "name": "Mentor Shop", "icon": "📦", "description": "Old Man Jenkins' shop. Upgrade your game equipment and continue the story.", "type": "shop", "exits": ["main_street"], "npcs": ["old_man_jenkins"], "features": ["dialog", "quests", "equipment_shop"] },
     "main_street": { "id": "main_street", "name": "Main Street", "icon": "🚶", "description": "The central path connecting locations in the cultivation district.", "type": "hub", "exits": ["grow_room", "mentor_shop"], "npcs": [], "features": ["travel"] }
   }
 }

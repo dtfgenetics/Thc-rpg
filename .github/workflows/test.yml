@@ -28,4 +28,5 @@ jobs:
           node --check src/game/Plant.js
           node --check src/game/Phenotype.js
           node --check src/game/Environment.js
+          node --check src/game/Equipment.js
           node --check src/game/Inventory.js
