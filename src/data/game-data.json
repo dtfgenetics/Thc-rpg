@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "genetics": {
     "blue_mango": {
       "id": "blue_mango",
@@ -15,6 +15,7 @@
       "resilience": 75,
       "difficulty": "moderate",
       "traits": ["vigorous", "branching", "resinous", "candy_blueberry", "ripe_mango"],
+      "phenotypeVariation": { "vigor": 6, "yieldPotential": 8, "qualityPotential": 5, "resilience": 6, "traitCount": 3 },
       "stageEmojis": { "seed": "🌰", "seedling": "🌱", "vegetative": "🌿", "flowering": "🌸", "harvest_ready": "💐" }
     },
     "blue_bubblegum": {
@@ -31,6 +32,7 @@
       "resilience": 75,
       "difficulty": "easy",
       "traits": ["sweet", "bubblegum", "berry", "resinous"],
+      "phenotypeVariation": { "vigor": 5, "yieldPotential": 7, "qualityPotential": 5, "resilience": 5, "traitCount": 3 },
       "stageEmojis": { "seed": "🌰", "seedling": "🌱", "vegetative": "🌿", "flowering": "🌸", "harvest_ready": "💐" }
     }
   },

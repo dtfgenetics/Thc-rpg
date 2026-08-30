@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [main, "build/**"]
+    branches: [main, "build/**", "feature/**", "fix/**"]
   pull_request:
     branches: [main]
 
@@ -26,4 +26,5 @@ jobs:
           node --check src/main.js
           node --check src/game/Game.js
           node --check src/game/Plant.js
+          node --check src/game/Phenotype.js
           node --check src/game/Inventory.js
