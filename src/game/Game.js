@@ -2,6 +2,7 @@ import { Plant } from './Plant.js';
 import { Inventory } from './Inventory.js';
 
 const objectiveKey = (objective, index) => objective.id || `${objective.type}:${objective.target || 'any'}:${index}`;
+const clone = value => JSON.parse(JSON.stringify(value));
 
 export class Game {
     constructor(name, gameData) {
@@ -31,6 +32,8 @@ export class Game {
 
     moveTo(loc) {
         if (!this.gameData.locations[loc]) return false;
+        const current = this.gameData.locations[this.location];
+        if (current?.exits?.length && !current.exits.includes(loc)) return false;
         this.location = loc;
         return true;
     }
@@ -57,10 +60,11 @@ export class Game {
         const xpGain = 50 + Math.floor(yieldAmt * 0.5);
         const moneyGain = Math.floor(yieldAmt * 10);
 
+        this.recordObjective('reach_growth_stage', 'harvest_ready');
+        this.recordObjective('harvest_plant', geneticsId);
         this.inventory.add('harvest', `${geneticsId}_harvest`, yieldAmt);
         this.player.money += moneyGain;
         this.addXP(xpGain);
-        this.recordObjective('harvest_plant', geneticsId);
 
         const result = {
             geneticsId,
@@ -75,7 +79,7 @@ export class Game {
     }
 
     addXP(amount) {
-        if (!Number.isFinite(amount) || amount <= 0) return;
+        if (!Number.isFinite(amount) || amount <= 0) return false;
         this.player.xp += amount;
 
         while (this.player.xp >= this.player.xpToNext) {
@@ -83,6 +87,7 @@ export class Game {
             this.player.level += 1;
             this.player.xpToNext = Math.floor(this.player.xpToNext * 1.5);
         }
+        return true;
     }
 
     startQuest(id = 'first_seed') {
@@ -94,11 +99,19 @@ export class Game {
         (quest.objectives || []).forEach((objective, index) => {
             this.quests.progress[id][objectiveKey(objective, index)] = 0;
         });
+
+        if (this.plant) {
+            this.recordObjective('plant_seed', this.plant.geneticsId);
+            if (this.plant.stage === 'harvest_ready') {
+                this.recordObjective('reach_growth_stage', 'harvest_ready');
+            }
+        }
         return true;
     }
 
     recordObjective(type, target = null, amount = 1) {
-        if (!Number.isFinite(amount) || amount <= 0) return;
+        if (!Number.isFinite(amount) || amount <= 0) return false;
+        let changed = false;
 
         for (const questId of this.quests.active) {
             const quest = this.gameData.quests?.[questId];
@@ -106,26 +119,42 @@ export class Game {
 
             (quest.objectives || []).forEach((objective, index) => {
                 if (objective.type !== type) return;
-                if (objective.target && target && objective.target !== target) return;
-                if (objective.target && !target) return;
+                if (objective.target && objective.target !== target) return;
 
                 const key = objectiveKey(objective, index);
                 const required = objective.required ?? 1;
                 const current = this.quests.progress[questId]?.[key] ?? 0;
-                this.quests.progress[questId][key] = Math.min(required, current + amount);
+                const next = Math.min(required, current + amount);
+                if (next !== current) {
+                    this.quests.progress[questId][key] = next;
+                    changed = true;
+                }
             });
         }
+        return changed;
+    }
+
+    getQuestProgress(id = 'first_seed') {
+        const quest = this.gameData.quests?.[id];
+        if (!quest) return null;
+        const progress = this.quests.progress[id] || {};
+        const objectives = (quest.objectives || []).map((objective, index) => {
+            const key = objectiveKey(objective, index);
+            const required = objective.required ?? 1;
+            const current = progress[key] ?? 0;
+            return { ...objective, current, required, completed: current >= required };
+        });
+        return {
+            id,
+            active: this.quests.active.includes(id),
+            completed: this.quests.completed.includes(id),
+            objectives
+        };
     }
 
     isQuestReady(id = 'first_seed') {
-        if (!this.quests.active.includes(id)) return false;
-        const quest = this.gameData.quests?.[id];
-        if (!quest) return false;
-
-        return (quest.objectives || []).every((objective, index) => {
-            const key = objectiveKey(objective, index);
-            return (this.quests.progress[id]?.[key] ?? 0) >= (objective.required ?? 1);
-        });
+        const state = this.getQuestProgress(id);
+        return Boolean(state?.active && state.objectives.every(objective => objective.completed));
     }
 
     completeQuest(id = 'first_seed') {
@@ -171,7 +200,7 @@ export class Game {
             quests: {
                 active: [...this.quests.active],
                 completed: [...this.quests.completed],
-                progress: structuredClone(this.quests.progress)
+                progress: clone(this.quests.progress)
             },
             location: this.location,
             time: this.time
@@ -200,18 +229,18 @@ export class Game {
 
         const loadedQuests = data.quests || {};
         this.quests = {
-            active: [...(loadedQuests.active || [])],
-            completed: [...(loadedQuests.completed || [])],
-            progress: structuredClone(loadedQuests.progress || {})
+            active: [...new Set(loadedQuests.active || [])],
+            completed: [...new Set(loadedQuests.completed || [])],
+            progress: clone(loadedQuests.progress || {})
         };
+        this.quests.active = this.quests.active.filter(id => !this.quests.completed.includes(id));
 
         for (const questId of this.quests.active) {
-            if (!this.quests.progress[questId]) {
-                this.quests.progress[questId] = {};
-                (this.gameData.quests?.[questId]?.objectives || []).forEach((objective, index) => {
-                    this.quests.progress[questId][objectiveKey(objective, index)] = 0;
-                });
-            }
+            if (!this.quests.progress[questId]) this.quests.progress[questId] = {};
+            (this.gameData.quests?.[questId]?.objectives || []).forEach((objective, index) => {
+                const key = objectiveKey(objective, index);
+                if (this.quests.progress[questId][key] == null) this.quests.progress[questId][key] = 0;
+            });
         }
 
         this.location = this.gameData.locations[data.location] ? data.location : 'grow_room';
