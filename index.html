@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="THC RPG — The First Seed, a browser-based cultivation role-playing game." />
+    <title>THC RPG — The First Seed</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; min-height: 100%; }
+        body { background: #0a0a1a; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; height: 100dvh; }
+        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #0a0a1a; z-index: 9999; flex-direction: column; gap: 20px; padding: 24px; }
+        #loading .logo { font-size: clamp(32px, 8vw, 48px); color: #2ecc71; font-weight: 900; text-shadow: 0 0 60px rgba(46,204,113,0.3); text-align: center; }
+        #loading .bar { width: min(240px, 75vw); height: 4px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+        #loading .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2ecc71, #f1c40f); border-radius: 4px; transition: width 0.25s ease; }
+        #loading .text { color: #8a8aa8; font-size: 14px; text-align: center; }
+        #loadError { display: none; max-width: 460px; color: #ff8f8f; text-align: center; font-size: 13px; line-height: 1.5; }
+    </style>
+    <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+    <div id="loading" role="status" aria-live="polite" aria-label="Loading THC RPG">
+        <div class="logo">🌱 THC RPG</div>
+        <div class="bar"><div class="bar-fill" id="loadBar"></div></div>
+        <div class="text" id="loadText">Loading game data...</div>
+        <div id="loadError"></div>
+    </div>
+
+    <div id="app" style="display:none;">
+        <header id="hud">
+            <div class="hud-left">
+                <div class="hud-item highlight"><span class="hud-label">Grower</span><span class="hud-value" id="playerName">—</span></div>
+                <div class="hud-item"><span class="hud-label">Level</span><span class="hud-value" id="playerLevel">1</span></div>
+                <div class="hud-item"><span class="hud-label">XP</span><span class="hud-value" id="playerXp">0 / 100</span><div class="hud-progress"><div class="hud-progress-bar" id="xpBar" style="width:0%"></div></div></div>
+                <div class="hud-item gold"><span class="hud-label">Money</span><span class="hud-value" id="playerMoney">$0</span></div>
+            </div>
+            <div class="hud-right">
+                <div class="hud-item plant-health"><span class="hud-label">Plant</span><span class="hud-value" id="plantStatus">🌰 None</span></div>
+                <div class="hud-item plant-health"><span class="hud-label">Health</span><span class="hud-value" id="plantHealth">—</span></div>
+            </div>
+        </header>
+
+        <main id="gameView">
+            <div id="scene">
+                <div id="sceneContent"></div>
+                <canvas id="particleCanvas" aria-hidden="true"></canvas>
+            </div>
+        </main>
+
+        <nav id="actionBar" aria-label="Game actions">
+            <button type="button" class="btn-primary" id="btnInteract">🌱 Interact</button>
+            <button type="button" id="btnPlant">🌿 Plant</button>
+            <button type="button" id="btnWater">💧 Water</button>
+            <button type="button" class="btn-gold" id="btnHarvest">🌾 Harvest</button>
+            <button type="button" class="btn-accent" id="btnInventory" aria-label="Open inventory">📦</button>
+            <button type="button" id="btnSave" aria-label="Save game">💾</button>
+        </nav>
+
+        <div id="dialogModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+            <div class="modal-box">
+                <h2 id="dialogTitle">Dialog</h2>
+                <p id="dialogText">Text goes here</p>
+                <div id="dialogChoices"></div>
+                <button type="button" class="modal-close" id="dialogClose">Close</button>
+            </div>
+        </div>
+
+        <div id="inventoryModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="inventoryTitle">
+            <div class="modal-box">
+                <h2 id="inventoryTitle">📦 Inventory</h2>
+                <div id="inventoryList"></div>
+                <button type="button" class="modal-close" id="inventoryClose">Close</button>
+            </div>
+        </div>
+
+        <div id="startModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gameTitle">
+            <div class="modal-box" style="text-align:center;">
+                <div class="start-badge">🌱 VERTICAL SLICE</div>
+                <h1 id="gameTitle">THC <span class="highlight">RPG</span></h1>
+                <div class="start-tagline">The First Seed</div>
+                <p style="margin:12px 0 4px;color:var(--text-muted);font-size:14px;">Enter your grower name to begin.</p>
+                <label for="nameInput" class="sr-only">Grower name</label>
+                <input id="nameInput" type="text" placeholder="Enter your grower name..." value="Green Thumb" maxlength="30" autocomplete="nickname" />
+                <div class="start-btn-group">
+                    <button type="button" class="start-btn primary" id="startBtn">🌱 Start New Game</button>
+                    <button type="button" class="start-btn secondary" id="loadBtn">📂 Load Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
