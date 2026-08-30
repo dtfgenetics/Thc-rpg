@@ -39,8 +39,12 @@ const Audio = {
         try {
             void this.ctx.resume();
             const sounds = {
-                click: { freq: 600, dur: 0.08, vol: 0.08 }, plant: { freq: 400, dur: 0.2, vol: 0.10 },
-                water: { freq: 300, dur: 0.15, vol: 0.07 }, harvest: { freq: 800, dur: 0.3, vol: 0.10 }, levelup: { freq: 500, dur: 0.4, vol: 0.12 }
+                click: { freq: 600, dur: 0.08, vol: 0.08 },
+                plant: { freq: 400, dur: 0.2, vol: 0.10 },
+                water: { freq: 300, dur: 0.15, vol: 0.07 },
+                harvest: { freq: 800, dur: 0.3, vol: 0.10 },
+                levelup: { freq: 500, dur: 0.4, vol: 0.12 },
+                purchase: { freq: 720, dur: 0.18, vol: 0.10 }
             };
             const s = sounds[type] || sounds.click;
             const osc = this.ctx.createOscillator();
@@ -88,10 +92,15 @@ class Particles {
             const angle = Math.random() * Math.PI * 2;
             const speed = (opts.speed ?? 2) + Math.random() * 2;
             this.parts.push({
-                x: x ?? this.w / 2, y: y ?? this.h / 2,
-                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - (opts.upward ? 1.5 : 0),
-                life: 1, decay: 0.008 + Math.random() * 0.015, size: (opts.size ?? 4) + Math.random() * 4,
-                color: opts.color || `hsl(${120 + Math.random() * 40}, 70%, 55%)`, gravity: opts.gravity ?? 0.02
+                x: x ?? this.w / 2,
+                y: y ?? this.h / 2,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - (opts.upward ? 1.5 : 0),
+                life: 1,
+                decay: 0.008 + Math.random() * 0.015,
+                size: (opts.size ?? 4) + Math.random() * 4,
+                color: opts.color || `hsl(${120 + Math.random() * 40}, 70%, 55%)`,
+                gravity: opts.gravity ?? 0.02
             });
         }
     }
@@ -133,7 +142,10 @@ class Particles {
         this.raf = requestAnimationFrame(this.loop);
         this.ambientTimer = window.setInterval(() => {
             if (document.hidden || this.parts.length >= 40 || Math.random() <= 0.7) return;
-            this.emit(Math.random() * this.w, this.h * 0.85, 2, { upward: true, size: 2, speed: 0.5, color: `hsla(${140 + Math.random() * 40}, 50%, 50%, 0.2)` });
+            this.emit(Math.random() * this.w, this.h * 0.85, 2, {
+                upward: true, size: 2, speed: 0.5,
+                color: `hsla(${140 + Math.random() * 40}, 50%, 50%, 0.2)`
+            });
         }, 800);
     }
 }
@@ -261,7 +273,9 @@ function talkToJenkins() {
     }
 
     game.inventory.add('seed', 'blue_mango', 1);
-    showDialog(`👴 ${npc.name}`, npc.dialog.first_meeting.join('\n\n'), [{ label: '🌱 Accept the Blue Mango seed', action: () => updateUI() }]);
+    showDialog(`👴 ${npc.name}`, npc.dialog.first_meeting.join('\n\n'), [
+        { label: '🌱 Accept the Blue Mango seed', action: () => updateUI() }
+    ]);
     updateUI();
 }
 
@@ -322,7 +336,9 @@ function plantSeed() {
     const genetics = gameData.genetics[geneticsId];
     Audio.play('plant');
     ensureParticles()?.emit(undefined, undefined, 20, { color: 'hsl(140, 80%, 50%)', size: 5 });
-    showDialog('🌱 Seed Planted!', `${genetics.name} has been planted. This individual received phenotype ${phenotypeSeedLabel(game.plant.phenotype.seed)}. Keep the simulation room stable and watch stress as it develops.`, [{ label: '💧 Water', action: waterPlant }]);
+    showDialog('🌱 Seed Planted!', `${genetics.name} has been planted. This individual received phenotype ${phenotypeSeedLabel(game.plant.phenotype.seed)}. Keep the simulation room stable and watch stress as it develops.`, [
+        { label: '💧 Water', action: waterPlant }
+    ]);
     updateUI();
 }
 
@@ -460,6 +476,107 @@ function showDialog(title, text, choices = null) {
     requestAnimationFrame(() => (refs.dialogChoices.querySelector('button') || refs.dialogClose)?.focus());
 }
 
+function equipmentPrecisionLabel(definition) {
+    const entries = Object.entries(definition?.controlSteps || {});
+    if (!entries.length) return 'No room controls';
+    const names = { temperature: 'Temp', humidity: 'Humidity', light: 'Light', ph: 'pH', ec: 'EC' };
+    return entries.map(([field, step]) => `${names[field] || field} ±${step}`).join(' • ');
+}
+
+function purchaseEquipment(id) {
+    if (!game || game.location !== 'mentor_shop') return;
+    const item = gameData.equipment?.[id];
+    if (!item) return;
+    if (!game.purchaseEquipment(id)) {
+        const reason = game.equipment.has(id)
+            ? 'You already own this upgrade.'
+            : game.player.money < Number(item.price)
+                ? `You need $${item.price}, but currently have $${game.player.money}.`
+                : 'The upgrade could not be purchased.';
+        showDialog('🧰 Upgrade Not Purchased', reason);
+        return;
+    }
+    Audio.play('purchase');
+    updateUI();
+    showDialog('🧰 Upgrade Installed', `${item.name} is now equipped in the ${formatTrait(item.slot)} slot.\n\n${equipmentPrecisionLabel(item)}\n\nBalance: $${game.player.money}`);
+}
+
+function equipOwnedEquipment(id) {
+    if (!game || game.location !== 'mentor_shop') return;
+    const item = gameData.equipment?.[id];
+    if (!item || !game.equipEquipment(id)) return;
+    Audio.play('click');
+    updateUI();
+}
+
+function renderEquipmentShop() {
+    const catalog = game.getEquipmentCatalog();
+    if (!catalog.length) return;
+
+    const shop = document.createElement('section');
+    shop.className = 'environment-card';
+    const header = document.createElement('div');
+    header.className = 'environment-header';
+    const title = document.createElement('div');
+    title.innerHTML = '<strong>🧰 Equipment Counter</strong><span>Upgrade your game controls</span>';
+    const balance = document.createElement('div');
+    balance.className = 'environment-score good';
+    balance.innerHTML = `<strong>$${game.player.money}</strong><span>Balance</span>`;
+    header.append(title, balance);
+    shop.append(header);
+
+    const note = document.createElement('div');
+    note.className = 'vpd-readout';
+    note.textContent = 'Upgrades improve control precision; they do not directly change genetics.';
+    shop.append(note);
+
+    const list = document.createElement('div');
+    list.className = 'environment-grid';
+
+    for (const item of catalog) {
+        const row = document.createElement('div');
+        row.className = 'environment-row';
+
+        const info = document.createElement('div');
+        info.className = 'environment-label';
+        const name = document.createElement('strong');
+        name.textContent = `${item.equipped ? '✓ ' : ''}${item.name}`;
+        name.style.display = 'block';
+        name.style.color = item.equipped ? 'var(--primary)' : 'var(--text-primary)';
+        const meta = document.createElement('span');
+        meta.textContent = `${formatTrait(item.slot)} • ${equipmentPrecisionLabel(item)}`;
+        meta.style.display = 'block';
+        meta.style.marginTop = '3px';
+        info.append(name, meta);
+
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'travel-button';
+        if (item.equipped) {
+            action.textContent = 'Equipped';
+            action.disabled = true;
+        } else if (item.owned) {
+            action.textContent = 'Equip';
+            action.dataset.equipEquipment = item.id;
+        } else {
+            action.textContent = `Buy $${item.price}`;
+            action.dataset.buyEquipment = item.id;
+            action.disabled = game.player.money < Number(item.price);
+            if (action.disabled) action.title = `Need $${item.price}`;
+        }
+
+        row.append(info, action);
+        list.append(row);
+    }
+
+    shop.append(list);
+    const disclaimer = document.createElement('p');
+    disclaimer.className = 'simulation-note';
+    disclaimer.textContent = 'Equipment values are THC RPG progression mechanics, not real-world cultivation specifications.';
+    shop.append(disclaimer);
+    refs.sceneContent.append(shop);
+}
+
 function renderScene() {
     if (!game) return;
     refs.sceneContent.replaceChildren();
@@ -481,6 +598,7 @@ function renderScene() {
         card.dataset.action = 'talk-jenkins';
         card.innerHTML = `<span class="npc-emoji">${npc.emoji}</span><span class="npc-name">${npc.name}</span><span class="npc-title">${npc.title}</span><span class="npc-hint">💬 Talk</span>`;
         refs.sceneContent.append(card);
+        renderEquipmentShop();
     } else {
         const empty = document.createElement('div');
         empty.className = 'empty-space';
@@ -538,20 +656,21 @@ function renderPhenotypeProfile(plant) {
     return profile;
 }
 
-function addEnvironmentControl(container, field, label, value, delta, unit = '') {
+function addEnvironmentControl(container, field, label, value, unit = '') {
+    const step = game.getEnvironmentControlStep(field);
     const row = document.createElement('div');
     row.className = 'environment-row';
     const name = document.createElement('span');
     name.className = 'environment-label';
-    name.textContent = label;
+    name.textContent = `${label} · ±${step}`;
     const controls = document.createElement('div');
     controls.className = 'environment-controls';
     const decrease = document.createElement('button');
     decrease.type = 'button';
     decrease.className = 'env-step';
     decrease.dataset.envField = field;
-    decrease.dataset.envDelta = String(-delta);
-    decrease.setAttribute('aria-label', `Decrease ${label}`);
+    decrease.dataset.envDirection = '-1';
+    decrease.setAttribute('aria-label', `Decrease ${label} by ${step}`);
     decrease.textContent = '−';
     const current = document.createElement('strong');
     current.className = 'environment-value';
@@ -560,8 +679,8 @@ function addEnvironmentControl(container, field, label, value, delta, unit = '')
     increase.type = 'button';
     increase.className = 'env-step';
     increase.dataset.envField = field;
-    increase.dataset.envDelta = String(delta);
-    increase.setAttribute('aria-label', `Increase ${label}`);
+    increase.dataset.envDirection = '1';
+    increase.setAttribute('aria-label', `Increase ${label} by ${step}`);
     increase.textContent = '+';
     controls.append(decrease, current, increase);
     row.append(name, controls);
@@ -577,7 +696,7 @@ function renderEnvironmentPanel() {
     const header = document.createElement('div');
     header.className = 'environment-header';
     const title = document.createElement('div');
-    title.innerHTML = '<strong>🎛️ Grow Room</strong><span>Game simulation controls</span>';
+    title.innerHTML = '<strong>🎛️ Grow Room</strong><span>Equipment-driven game controls</span>';
     const score = document.createElement('div');
     score.className = `environment-score ${status.status}`;
     score.innerHTML = `<strong>${Math.round(status.score)}%</strong><span>${formatTrait(status.status)}</span>`;
@@ -585,19 +704,21 @@ function renderEnvironmentPanel() {
 
     const vpd = document.createElement('div');
     vpd.className = 'vpd-readout';
-    vpd.textContent = `Air balance • VPD ${status.vpd.toFixed(2)} kPa`;
+    const equipped = game.equipment.getEquippedDefinitions();
+    const gearNames = Object.values(equipped).map(item => item.name).join(' • ');
+    vpd.textContent = `VPD ${status.vpd.toFixed(2)} kPa • ${gearNames}`;
 
     const controls = document.createElement('div');
     controls.className = 'environment-grid';
-    addEnvironmentControl(controls, 'temperature', 'Temperature', room.temperature.toFixed(0), 2, '°F');
-    addEnvironmentControl(controls, 'humidity', 'Humidity', room.humidity.toFixed(0), 5, '%');
-    addEnvironmentControl(controls, 'light', 'Light', room.light.toFixed(0), 5, '%');
-    addEnvironmentControl(controls, 'ph', 'pH', room.ph.toFixed(1), 0.1);
-    addEnvironmentControl(controls, 'ec', 'EC', room.ec.toFixed(1), 0.1);
+    addEnvironmentControl(controls, 'temperature', 'Temperature', room.temperature.toFixed(0), '°F');
+    addEnvironmentControl(controls, 'humidity', 'Humidity', room.humidity.toFixed(0), '%');
+    addEnvironmentControl(controls, 'light', 'Light', room.light.toFixed(0), '%');
+    addEnvironmentControl(controls, 'ph', 'pH', room.ph.toFixed(1));
+    addEnvironmentControl(controls, 'ec', 'EC', room.ec.toFixed(1));
 
     const note = document.createElement('p');
     note.className = 'simulation-note';
-    note.textContent = 'These values tune THC RPG gameplay and are not real-world cultivation instructions.';
+    note.textContent = 'Upgrade gear at the Mentor Shop for finer game controls. These are simulation values, not real-world cultivation instructions.';
 
     card.append(header, vpd, controls, note);
     refs.sceneContent.append(card);
@@ -682,11 +803,9 @@ function updateUI() {
 function adjustRoomControl(control) {
     if (!game || game.location !== 'grow_room') return;
     const field = control.dataset.envField;
-    const delta = Number(control.dataset.envDelta);
-    if (!field || !Number.isFinite(delta)) return;
-    const current = Number(game.environment[field]);
-    const next = Number((current + delta).toFixed(2));
-    if (!game.setEnvironment(field, next)) return;
+    const direction = Number(control.dataset.envDirection);
+    if (!field || ![-1, 1].includes(direction)) return;
+    if (!game.nudgeEnvironment(field, direction)) return;
     Audio.play('click');
     updateUI();
 }
@@ -703,6 +822,16 @@ function bindEvents() {
     refs.dialogClose.addEventListener('click', closeDialog);
     refs.inventoryClose.addEventListener('click', closeInventory);
     refs.sceneContent.addEventListener('click', event => {
+        const buyButton = event.target.closest('[data-buy-equipment]');
+        if (buyButton) {
+            purchaseEquipment(buyButton.dataset.buyEquipment);
+            return;
+        }
+        const equipButton = event.target.closest('[data-equip-equipment]');
+        if (equipButton) {
+            equipOwnedEquipment(equipButton.dataset.equipEquipment);
+            return;
+        }
         const envControl = event.target.closest('[data-env-field]');
         if (envControl) {
             adjustRoomControl(envControl);
