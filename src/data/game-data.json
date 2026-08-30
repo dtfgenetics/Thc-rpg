@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "genetics": {
+    "blue_mango": {
+      "id": "blue_mango",
+      "name": "Blue Mango",
+      "breeder": "DTF Genetics",
+      "lineage": { "mother": "Somango XXL", "father": "Blueberry Butcher" },
+      "description": "A vigorous DTF Genetics hybrid known for strong branching, heavy resin production, and a candy blueberry to ripe mango aromatic profile.",
+      "type": "hybrid",
+      "vigor": 85,
+      "floweringDays": { "min": 56, "max": 70 },
+      "yieldPotential": 80,
+      "qualityPotential": 88,
+      "resilience": 75,
+      "difficulty": "moderate",
+      "traits": ["vigorous", "branching", "resinous", "candy_blueberry", "ripe_mango"],
+      "stageEmojis": { "seed": "🌰", "seedling": "🌱", "vegetative": "🌿", "flowering": "🌸", "harvest_ready": "💐" }
+    },
+    "blue_bubblegum": {
+      "id": "blue_bubblegum",
+      "name": "Blue Bubblegum",
+      "breeder": "DTF Genetics",
+      "lineage": { "mother": "Bubblegum Kush", "father": "Blueberry Butcher" },
+      "description": "A DTF Genetics hybrid combining Bubblegum Kush with Blueberry Butcher, emphasizing sweet berry and bubblegum character.",
+      "type": "hybrid",
+      "vigor": 80,
+      "floweringDays": { "min": 56, "max": 70 },
+      "yieldPotential": 75,
+      "qualityPotential": 85,
+      "resilience": 75,
+      "difficulty": "easy",
+      "traits": ["sweet", "bubblegum", "berry", "resinous"],
+      "stageEmojis": { "seed": "🌰", "seedling": "🌱", "vegetative": "🌿", "flowering": "🌸", "harvest_ready": "💐" }
+    }
+  },
+  "quests": {
+    "first_seed": {
+      "id": "first_seed",
+      "title": "The First Seed",
+      "icon": "🌱",
+      "description": "Plant your first Blue Mango seed, care for the plant through its growth cycle, and complete your first harvest.",
+      "prerequisites": [],
+      "objectives": [
+        { "id": "plant_first_seed", "type": "plant_seed", "target": "blue_mango", "required": 1, "description": "Plant a Blue Mango seed" },
+        { "id": "grow_first_plant", "type": "reach_growth_stage", "target": "harvest_ready", "required": 1, "description": "Grow the plant until it is harvest ready" },
+        { "id": "harvest_first_plant", "type": "harvest_plant", "target": "blue_mango", "required": 1, "description": "Harvest your first Blue Mango plant" }
+      ],
+      "rewards": { "xp": 100, "money": 50, "items": { "seed": { "blue_bubblegum": 2 } } },
+      "nextQuest": null
+    }
+  },
+  "items": {
+    "basic_soil": { "id": "basic_soil", "name": "Basic Soil", "category": "item", "description": "A basic growing medium suitable for beginning plants.", "value": 10, "stackable": true, "maxStack": 20 },
+    "small_pot": { "id": "small_pot", "name": "Small Pot", "category": "item", "description": "A starter container suitable for seedlings and small plants.", "value": 5, "stackable": true, "maxStack": 10 },
+    "nutrients": { "id": "nutrients", "name": "Basic Nutrient Mix", "category": "item", "description": "An introductory nutrient mix used to support plant growth.", "value": 15, "stackable": true, "maxStack": 20, "uses": 5 }
+  },
+  "npcs": {
+    "old_man_jenkins": {
+      "id": "old_man_jenkins",
+      "name": "Old Man Jenkins",
+      "title": "Master Grower",
+      "emoji": "👴",
+      "location": "mentor_shop",
+      "roles": ["mentor", "quest_giver"],
+      "dialog": {
+        "first_meeting": ["Well, well, a new face!", "I'm Old Man Jenkins. I've spent decades learning how plants respond to their environment.", "If you want to become a grower, we'll start with the fundamentals.", "I've got a Blue Mango seed here that needs a home. Take it.", "Plant it, care for it, learn from it, and bring me your first harvest."],
+        "after_plant": ["Good. Getting the seed planted is only the beginning.", "Watch the plant closely. Changes in its leaves and growth can tell you a lot about what it needs."],
+        "harvest_ready": ["Look at that. You brought it all the way through the cycle.", "Your first harvest is an important milestone.", "You've learned the basics. Now we can start getting into the real science."]
+      }
+    }
+  },
+  "locations": {
+    "grow_room": { "id": "grow_room", "name": "Grow Room", "icon": "🌱", "description": "Your starter cultivation space and home base.", "type": "cultivation", "exits": ["main_street"], "npcs": [], "features": ["planting", "watering", "plant_inspection"] },
+    "mentor_shop": { "id": "mentor_shop", "name": "Mentor Shop", "icon": "📦", "description": "Old Man Jenkins' shop, filled with genetics, supplies, and cultivation knowledge.", "type": "shop", "exits": ["main_street"], "npcs": ["old_man_jenkins"], "features": ["dialog", "quests"] },
+    "main_street": { "id": "main_street", "name": "Main Street", "icon": "🚶", "description": "The central path connecting locations in the cultivation district.", "type": "hub", "exits": ["grow_room", "mentor_shop"], "npcs": [], "features": ["travel"] }
+  }
+}
