@@ -62,7 +62,7 @@ export class Environment {
         return Math.max(0, saturationKpa * (1 - (this.humidity / 100)));
     }
 
-    evaluate(stage) {
+    evaluate(stage, scoreBonus = 0) {
         const target = targetForStage(stage);
         const vpd = this.getVpd();
         const scores = {
@@ -75,7 +75,7 @@ export class Environment {
         };
 
         const airScore = (scores.temperature + scores.humidity + scores.vpd) / 3;
-        const overall = clamp(
+        const baseScore = clamp(
             (airScore * 0.35) +
             (scores.light * 0.25) +
             (scores.ph * 0.20) +
@@ -83,6 +83,8 @@ export class Environment {
             0,
             100
         );
+        const equipmentBonus = clamp(Number(scoreBonus) || 0, 0, 15);
+        const overall = clamp(baseScore + equipmentBonus, 0, 100);
 
         const stressRate = overall >= 75 ? 0 : ((75 - overall) / 75) * 0.18;
         const healthDamageRate = overall >= 35 ? 0 : ((35 - overall) / 35) * 0.08;
@@ -91,6 +93,8 @@ export class Environment {
         return {
             stage,
             score: overall,
+            baseScore,
+            equipmentBonus,
             status: overall >= 75 ? 'good' : overall >= 45 ? 'warning' : 'danger',
             vpd,
             scores,
