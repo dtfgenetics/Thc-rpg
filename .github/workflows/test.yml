@@ -25,6 +25,7 @@ jobs:
         run: |
           node --check src/main.js
           node --check src/autosave.js
+          node --check src/progression-feedback.js
           node --check src/game/Game.js
           node --check src/game/Plant.js
           node --check src/game/Phenotype.js
