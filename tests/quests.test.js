@@ -77,7 +77,7 @@ describe('Quest chain', () => {
         assert.equal(room.completed, true);
     });
 
-    it('completes the full second quest and awards rewards once', () => {
+    it('completes the full second quest, awards rewards once, and unlocks Phenotype Hunt', () => {
         const game = new Game('Quest Test', gameData);
         completeFirstSeed(game);
         assert.equal(game.inventory.get('seed', 'blue_bubblegum'), 2);
@@ -107,7 +107,7 @@ describe('Quest chain', () => {
         assert.equal(game.inventory.get('item', 'nutrients'), beforeNutrients + 2);
         assert.equal(game.completeQuest('dial_it_in'), false);
         assert.deepEqual(game.quests.completed, ['first_seed', 'dial_it_in']);
-        assert.deepEqual(game.getAvailableQuests(), []);
+        assert.deepEqual(game.getAvailableQuests().map(quest => quest.id), ['phenotype_hunt']);
     });
 
     it('filters stale quest ids when loading a save', () => {
