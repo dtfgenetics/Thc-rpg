@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "genetics": {
     "blue_mango": {
       "id": "blue_mango",
@@ -34,6 +34,23 @@
       "traits": ["sweet", "bubblegum", "berry", "resinous"],
       "phenotypeVariation": { "vigor": 5, "yieldPotential": 7, "qualityPotential": 5, "resilience": 5, "traitCount": 3 },
       "stageEmojis": { "seed": "🌰", "seedling": "🌱", "vegetative": "🌿", "flowering": "🌸", "harvest_ready": "💐" }
+    },
+    "mango_bubbles": {
+      "id": "mango_bubbles",
+      "name": "Mango Bubbles",
+      "breeder": "DTF Genetics",
+      "lineage": { "mother": "Blue Mango", "father": "Blue Bubblegum" },
+      "description": "A DTF Genetics Blue Mango × Blue Bubblegum hybrid built as the first advanced phenotype-selection line in THC RPG.",
+      "type": "hybrid",
+      "vigor": 83,
+      "floweringDays": { "min": 56, "max": 70 },
+      "yieldPotential": 79,
+      "qualityPotential": 88,
+      "resilience": 76,
+      "difficulty": "moderate",
+      "traits": ["mango", "bubblegum", "berry", "sweet", "resinous", "branching"],
+      "phenotypeVariation": { "vigor": 7, "yieldPotential": 9, "qualityPotential": 7, "resilience": 7, "traitCount": 4 },
+      "stageEmojis": { "seed": "🌰", "seedling": "🌱", "vegetative": "🌿", "flowering": "🌸", "harvest_ready": "💐" }
     }
   },
   "quests": {
@@ -64,6 +81,22 @@
         { "id": "harvest_blue_bubblegum", "type": "harvest_plant", "target": "blue_bubblegum", "required": 1, "description": "Harvest Blue Bubblegum" }
       ],
       "rewards": { "xp": 150, "money": 100, "items": { "item": { "nutrients": 2 } } },
+      "nextQuest": "phenotype_hunt"
+    },
+    "phenotype_hunt": {
+      "id": "phenotype_hunt",
+      "title": "Phenotype Hunt",
+      "icon": "🧬",
+      "description": "Use advanced equipment and phenotype variation to produce a high-quality Mango Bubbles harvest.",
+      "prerequisites": ["dial_it_in"],
+      "startItems": { "seed": { "mango_bubbles": 3 } },
+      "objectives": [
+        { "id": "advanced_gear", "type": "advanced_equipment_owned", "required": 2, "description": "Own 2 advanced-tier equipment upgrades" },
+        { "id": "plant_mango_bubbles", "type": "plant_seed", "target": "mango_bubbles", "required": 1, "description": "Plant one of the Mango Bubbles seeds Jenkins supplied" },
+        { "id": "stabilize_advanced_room", "type": "maintain_environment_status", "target": "good", "required": 5, "description": "Hold a good room score for 5 simulation checks" },
+        { "id": "quality_mango_bubbles", "type": "harvest_quality", "target": "mango_bubbles", "required": 80, "description": "Harvest Mango Bubbles at 80+ quality" }
+      ],
+      "rewards": { "xp": 250, "money": 200, "items": { "seed": { "mango_bubbles": 2 }, "item": { "nutrients": 3 } } },
       "nextQuest": null
     }
   },
@@ -73,12 +106,15 @@
     "nutrients": { "id": "nutrients", "name": "Basic Nutrient Mix", "category": "item", "description": "An introductory nutrient mix used to support plant growth.", "value": 15, "stackable": true, "maxStack": 20, "uses": 5 }
   },
   "equipment": {
-    "starter_fixture": { "id": "starter_fixture", "name": "Starter Fixture", "slot": "lighting", "starter": true, "price": 0, "description": "Basic lighting controls with coarse adjustment.", "controlSteps": { "light": 10 } },
-    "adjustable_fixture": { "id": "adjustable_fixture", "name": "Adjustable Fixture", "slot": "lighting", "price": 75, "description": "An upgraded game fixture with finer light control.", "controlSteps": { "light": 5 } },
-    "basic_ventilation": { "id": "basic_ventilation", "name": "Basic Ventilation", "slot": "climate", "starter": true, "price": 0, "description": "Starter room controls for temperature and humidity.", "controlSteps": { "temperature": 5, "humidity": 10 } },
-    "climate_module": { "id": "climate_module", "name": "Climate Module", "slot": "climate", "price": 90, "description": "A game upgrade that allows finer climate adjustments.", "controlSteps": { "temperature": 2, "humidity": 5 } },
-    "basic_meter": { "id": "basic_meter", "name": "Basic Meter", "slot": "monitoring", "starter": true, "price": 0, "description": "Starter monitoring controls with coarse adjustment.", "controlSteps": { "ph": 0.5, "ec": 0.5 } },
-    "precision_meter": { "id": "precision_meter", "name": "Precision Meter", "slot": "monitoring", "price": 60, "description": "A game monitoring upgrade with finer pH and EC adjustment.", "controlSteps": { "ph": 0.1, "ec": 0.1 } }
+    "starter_fixture": { "id": "starter_fixture", "name": "Starter Fixture", "slot": "lighting", "starter": true, "tier": 0, "price": 0, "description": "Basic lighting controls with coarse adjustment.", "controlSteps": { "light": 10 } },
+    "adjustable_fixture": { "id": "adjustable_fixture", "name": "Adjustable Fixture", "slot": "lighting", "tier": 1, "price": 75, "environmentScoreBonus": 1, "description": "An upgraded game fixture with finer light control and a small room-stability bonus.", "controlSteps": { "light": 5 } },
+    "precision_led_array": { "id": "precision_led_array", "name": "Precision LED Array", "slot": "lighting", "tier": 2, "price": 180, "environmentScoreBonus": 3, "description": "Advanced game lighting with precise adjustment and stronger room stability.", "controlSteps": { "light": 2 } },
+    "basic_ventilation": { "id": "basic_ventilation", "name": "Basic Ventilation", "slot": "climate", "starter": true, "tier": 0, "price": 0, "description": "Starter room controls for temperature and humidity.", "controlSteps": { "temperature": 5, "humidity": 10 } },
+    "climate_module": { "id": "climate_module", "name": "Climate Module", "slot": "climate", "tier": 1, "price": 90, "environmentScoreBonus": 1, "description": "A game upgrade that allows finer climate adjustments and a small room-stability bonus.", "controlSteps": { "temperature": 2, "humidity": 5 } },
+    "environment_controller": { "id": "environment_controller", "name": "Environment Controller", "slot": "climate", "tier": 2, "price": 220, "environmentScoreBonus": 4, "description": "Advanced climate control with tight adjustment and the largest room-stability bonus.", "controlSteps": { "temperature": 1, "humidity": 2 } },
+    "basic_meter": { "id": "basic_meter", "name": "Basic Meter", "slot": "monitoring", "starter": true, "tier": 0, "price": 0, "description": "Starter monitoring controls with coarse adjustment.", "controlSteps": { "ph": 0.5, "ec": 0.5 } },
+    "precision_meter": { "id": "precision_meter", "name": "Precision Meter", "slot": "monitoring", "tier": 1, "price": 60, "environmentScoreBonus": 1, "description": "A game monitoring upgrade with finer pH and EC adjustment plus a small room-stability bonus.", "controlSteps": { "ph": 0.1, "ec": 0.1 } },
+    "lab_monitor": { "id": "lab_monitor", "name": "Lab Monitor", "slot": "monitoring", "tier": 2, "price": 150, "environmentScoreBonus": 3, "description": "Advanced monitoring with very fine chemistry controls and stronger room stability.", "controlSteps": { "ph": 0.05, "ec": 0.05 } }
   },
   "npcs": {
     "old_man_jenkins": {
@@ -91,9 +127,9 @@
       "dialog": {
         "first_meeting": ["Well, well, a new face!", "I'm Old Man Jenkins. I've spent decades learning how plants respond to their environment.", "If you want to become a grower, we'll start with the fundamentals.", "I've got a Blue Mango seed here that needs a home. Take it.", "Plant it, care for it, learn from it, and bring me your first harvest."],
         "after_plant": ["Good. Getting the seed planted is only the beginning.", "Watch the plant closely. Changes in its leaves and growth can tell you a lot about what it needs."],
-        "first_complete": ["Look at that. You brought it all the way through the cycle.", "Your first harvest is an important milestone.", "Now use what you earned to improve the room and show me what those Blue Bubblegum seeds can do."],
-        "dial_it_in": ["The next lesson is control.", "Upgrade one part of your game setup, hold the room in a good state, then run Blue Bubblegum from seed to harvest.", "The point is not perfect numbers. The point is learning how genetics, environment, and equipment interact."],
-        "all_complete": ["You've proven you can manage more than one genetic line and adapt the room around the plant.", "That's the foundation. The next chapter can get much deeper." ]
+        "first_complete": ["Look at that. You brought it all the way through the cycle.", "Your first harvest is an important milestone.", "Now use what you earned to improve the room and show me what the next genetic line can do."],
+        "dial_it_in": ["The next lesson is control and selection.", "Use the objective tracker, your equipment, and what each phenotype shows you.", "The point is not perfect numbers. The point is learning how genetics, environment, equipment, and selection interact."],
+        "all_complete": ["You've managed three genetic lines, upgraded the room, and selected for a quality target.", "That's a real progression foundation. The next chapter can expand into breeding, larger facilities, and deeper phenotype selection." ]
       }
     }
   },
