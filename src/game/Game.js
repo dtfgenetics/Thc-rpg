@@ -7,6 +7,8 @@ const objectiveKey = (objective, index) => objective.id || `${objective.type}:${
 const clone = value => JSON.parse(JSON.stringify(value));
 
 export class Game {
+    static current = null;
+
     constructor(name, gameData) {
         if (!gameData?.genetics || !gameData?.locations) {
             throw new Error('Game requires valid game data');
@@ -32,6 +34,7 @@ export class Game {
 
         this.inventory.add('item', 'basic_soil', 1);
         this.inventory.add('item', 'small_pot', 1);
+        Game.current = this;
     }
 
     moveTo(loc) {

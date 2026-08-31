@@ -53,7 +53,7 @@
             <button type="button" id="btnWater">💧 Water</button>
             <button type="button" class="btn-gold" id="btnHarvest">🌾 Harvest</button>
             <button type="button" class="btn-accent" id="btnInventory" aria-label="Open inventory">📦</button>
-            <button type="button" id="btnSave" aria-label="Save game">💾</button>
+            <button type="button" id="btnSave" aria-label="Save game (autosave enabled)" title="Autosaves every 30 seconds">💾</button>
         </nav>
 
         <div id="startModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gameTitle">
@@ -89,6 +89,7 @@
         </div>
     </div>
 
+    <script type="module" src="./src/autosave.js"></script>
     <script type="module" src="./src/main.js"></script>
 </body>
 </html>
