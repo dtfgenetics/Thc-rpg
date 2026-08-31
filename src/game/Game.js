@@ -67,7 +67,10 @@ export class Game {
     }
 
     getEnvironmentStatus() {
-        return this.environment.evaluate(this.plant?.stage || 'vegetative');
+        return this.environment.evaluate(
+            this.plant?.stage || 'vegetative',
+            this.equipment.getEnvironmentScoreBonus()
+        );
     }
 
     getEquipmentCatalog() {
@@ -86,6 +89,7 @@ export class Game {
         if (!this.equipment.grant(id, true)) return false;
         this.player.money -= price;
         this.recordObjective('purchase_equipment', id);
+        for (const questId of this.quests.active) this.syncQuestProgress(questId);
         return true;
     }
 
@@ -117,6 +121,7 @@ export class Game {
 
         this.recordObjective('reach_growth_stage', 'harvest_ready');
         this.recordObjective('harvest_plant', geneticsId);
+        this.recordObjectiveValue('harvest_quality', geneticsId, quality);
         this.inventory.add('harvest', `${geneticsId}_harvest`, yieldAmt);
         this.player.money += moneyGain;
         this.addXP(xpGain);
@@ -159,6 +164,15 @@ export class Game {
             .map(quest => clone(quest));
     }
 
+    grantItems(items = {}) {
+        for (const [category, entries] of Object.entries(items || {})) {
+            const normalizedCategory = category === 'seeds' ? 'seed' : category;
+            for (const [itemId, count] of Object.entries(entries || {})) {
+                this.inventory.add(normalizedCategory, itemId, count);
+            }
+        }
+    }
+
     startQuest(id = 'first_seed') {
         const quest = this.gameData.quests?.[id];
         if (!quest || this.quests.completed.includes(id) || this.quests.active.includes(id)) return false;
@@ -170,6 +184,7 @@ export class Game {
             this.quests.progress[id][objectiveKey(objective, index)] = 0;
         });
 
+        this.grantItems(quest.startItems || {});
         this.syncQuestProgress(id);
         return true;
     }
@@ -190,6 +205,9 @@ export class Game {
         const upgraded = this.equipment.getOwnedDefinitions().find(item => item.starter !== true);
         if (upgraded) changed = this.recordObjective('purchase_equipment', upgraded.id) || changed;
 
+        const advancedCount = this.equipment.getOwnedTierCount(2);
+        changed = this.recordObjectiveValue('advanced_equipment_owned', null, advancedCount) || changed;
+
         return changed;
     }
 
@@ -209,6 +227,31 @@ export class Game {
                 const required = objective.required ?? 1;
                 const current = this.quests.progress[questId]?.[key] ?? 0;
                 const next = Math.min(required, current + amount);
+                if (next !== current) {
+                    this.quests.progress[questId][key] = next;
+                    changed = true;
+                }
+            });
+        }
+        return changed;
+    }
+
+    recordObjectiveValue(type, target = null, value = 0) {
+        if (!Number.isFinite(value) || value < 0) return false;
+        let changed = false;
+
+        for (const questId of this.quests.active) {
+            const quest = this.gameData.quests?.[questId];
+            if (!quest) continue;
+
+            (quest.objectives || []).forEach((objective, index) => {
+                if (objective.type !== type) return;
+                if (objective.target && objective.target !== target) return;
+
+                const key = objectiveKey(objective, index);
+                const required = objective.required ?? 1;
+                const current = this.quests.progress[questId]?.[key] ?? 0;
+                const next = Math.min(required, Math.max(current, value));
                 if (next !== current) {
                     this.quests.progress[questId][key] = next;
                     changed = true;
@@ -263,14 +306,7 @@ export class Game {
         const rewards = quest.rewards || {};
         this.addXP(rewards.xp ?? 0);
         this.player.money += rewards.money ?? 0;
-
-        const rewardItems = rewards.items || {};
-        for (const [category, entries] of Object.entries(rewardItems)) {
-            const normalizedCategory = category === 'seeds' ? 'seed' : category;
-            for (const [itemId, count] of Object.entries(entries || {})) {
-                this.inventory.add(normalizedCategory, itemId, count);
-            }
-        }
+        this.grantItems(rewards.items || {});
 
         return true;
     }
@@ -288,7 +324,7 @@ export class Game {
         if (!this.plant) return;
 
         const wasReady = this.plant.stage === 'harvest_ready';
-        const environment = this.environment.evaluate(this.plant.stage);
+        const environment = this.getEnvironmentStatus();
         this.recordObjective('maintain_environment_status', environment.status);
         this.plant.update(now, environment);
         if (!wasReady && this.plant.stage === 'harvest_ready') {
