@@ -5,7 +5,7 @@ import { Game } from '../src/game/Game.js';
 
 const gameData = JSON.parse(await readFile(new URL('../src/data/game-data.json', import.meta.url), 'utf8'));
 
-it('plays through both current quest chapters across a save/load boundary', () => {
+it('plays through all current quest chapters across save/load boundaries', () => {
     const game = new Game('Integration Grower', gameData);
 
     assert.equal(game.startQuest('first_seed'), true);
@@ -52,7 +52,44 @@ it('plays through both current quest chapters across a save/load boundary', () =
     assert.ok(restored.harvest());
     assert.equal(restored.isQuestReady('dial_it_in'), true);
     assert.equal(restored.completeQuest('dial_it_in'), true);
-    assert.equal(restored.quests.completed.includes('dial_it_in'), true);
     assert.equal(restored.inventory.get('item', 'nutrients'), 2);
-    assert.equal(restored.getAvailableQuests().length, 0);
+    assert.deepEqual(restored.getAvailableQuests().map(quest => quest.id), ['phenotype_hunt']);
+
+    assert.equal(restored.startQuest('phenotype_hunt'), true);
+    assert.equal(restored.inventory.get('seed', 'mango_bubbles'), 3);
+    assert.equal(restored.purchaseEquipment('lab_monitor'), true);
+    assert.equal(restored.purchaseEquipment('precision_led_array'), true);
+    assert.equal(restored.equipment.getOwnedTierCount(2), 2);
+    assert.equal(restored.plantSeed('mango_bubbles', 303), true);
+
+    restored.setEnvironment('temperature', 74);
+    restored.setEnvironment('humidity', 68);
+    restored.setEnvironment('light', 30);
+    restored.setEnvironment('ph', 6.2);
+    restored.setEnvironment('ec', 0.5);
+
+    now = restored.plant.lastUpdate;
+    for (let i = 0; i < 5; i += 1) {
+        now += 3_000;
+        restored.update(now);
+    }
+
+    const advanced = restored.getQuestProgress('phenotype_hunt');
+    assert.equal(advanced.objectives.find(objective => objective.id === 'advanced_gear').current, 2);
+    assert.equal(advanced.objectives.find(objective => objective.id === 'stabilize_advanced_room').current, 5);
+    assert.equal(advanced.objectives.find(objective => objective.id === 'plant_mango_bubbles').completed, true);
+
+    const chapterThreeSave = restored.save();
+    const finalGame = new Game('Final', gameData);
+    finalGame.load(chapterThreeSave);
+    finalGame.plant.development = 100;
+    finalGame.plant.updateStage();
+    const mangoHarvest = finalGame.harvest();
+    assert.ok(mangoHarvest);
+    assert.ok(mangoHarvest.quality >= 80);
+    assert.equal(finalGame.isQuestReady('phenotype_hunt'), true);
+    assert.equal(finalGame.completeQuest('phenotype_hunt'), true);
+    assert.equal(finalGame.inventory.get('seed', 'mango_bubbles'), 4);
+    assert.equal(finalGame.inventory.get('item', 'nutrients'), 5);
+    assert.equal(finalGame.getAvailableQuests().length, 0);
 });

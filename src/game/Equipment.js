@@ -7,6 +7,7 @@ const DEFAULT_CONTROL_STEPS = Object.freeze({
 });
 
 const clone = value => JSON.parse(JSON.stringify(value));
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export class Equipment {
     constructor(definitions = {}) {
@@ -75,6 +76,21 @@ export class Equipment {
             if (Number.isFinite(candidate) && candidate > 0) step = Math.min(step, candidate);
         }
         return step;
+    }
+
+    getEnvironmentScoreBonus() {
+        let total = 0;
+        for (const id of Object.values(this.equipped)) {
+            const bonus = Number(this.get(id)?.environmentScoreBonus);
+            if (Number.isFinite(bonus) && bonus > 0) total += bonus;
+        }
+        return clamp(total, 0, 15);
+    }
+
+    getOwnedTierCount(minTier = 1) {
+        const minimum = Number(minTier);
+        if (!Number.isFinite(minimum)) return 0;
+        return this.getOwnedDefinitions().filter(item => Number(item.tier || 0) >= minimum).length;
     }
 
     save() {
