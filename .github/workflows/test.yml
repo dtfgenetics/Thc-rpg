@@ -12,6 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,6 +20,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install dependencies
+        run: npm install
       - name: Run tests
         run: npm test
       - name: Syntax check browser modules
@@ -33,3 +36,7 @@ jobs:
           node --check src/game/Equipment.js
           node --check src/game/Inventory.js
           node --check src/game/SaveStore.js
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser acceptance
+        run: npm run test:e2e
