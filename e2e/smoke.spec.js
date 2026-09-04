@@ -9,7 +9,7 @@ function collectErrors(page) {
   return errors;
 }
 
-test('boots, starts a game, opens inventory, and saves', async ({ page }) => {
+test('boots, completes onboarding, opens inventory, and saves', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
 
@@ -23,9 +23,16 @@ test('boots, starts a game, opens inventory, and saves', async ({ page }) => {
   await expect(page.locator('#startModal')).toBeHidden();
   await expect(page.locator('#sceneContent')).not.toBeEmpty();
 
+  const welcome = page.getByRole('dialog', { name: /Welcome, Grower/i });
+  await expect(welcome).toBeVisible();
+  await welcome.getByRole('button', { name: 'Close' }).click();
+  await expect(welcome).toBeHidden();
+
   await page.getByRole('button', { name: 'Open inventory' }).click();
-  await expect(page.getByRole('dialog', { name: /Inventory/i })).toBeVisible();
-  await page.getByRole('button', { name: 'Close' }).last().click();
+  const inventory = page.getByRole('dialog', { name: /Inventory/i });
+  await expect(inventory).toBeVisible();
+  await inventory.getByRole('button', { name: 'Close' }).click();
+  await expect(inventory).toBeHidden();
 
   await page.getByRole('button', { name: /Save game/i }).click();
   const hasSave = await page.evaluate(() => Object.keys(localStorage).some(key => key.toLowerCase().includes('thc') || key.toLowerCase().includes('save')));
