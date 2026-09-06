@@ -40,7 +40,7 @@ test('propagates a Keeper cutting and replants the exact phenotype', async ({ pa
   await page.getByRole('button', { name: 'Open pheno grow journal' }).click();
   const journal = page.getByRole('dialog', { name: /Pheno Grow Journal/i });
   await expect(journal).toBeVisible();
-  await expect(journal.getByText(/Phenotype #0EB613CB/i)).toBeVisible();
+  await expect(journal.getByText(/Phenotype #0EB6138B/i)).toBeVisible();
   await expect(journal.getByText(/0 cuttings ready/i)).toBeVisible();
 
   await journal.getByRole('button', { name: /Propagate Cutting/i }).click();
