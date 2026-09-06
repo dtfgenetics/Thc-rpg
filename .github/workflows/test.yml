@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [main, "build/**", "feature/**", "fix/**"]
+    branches: [main, "build/**", "feature/**", "fix/**", "release/**"]
   pull_request:
     branches: [main]
 
@@ -24,7 +24,7 @@ jobs:
         run: npm install
       - name: Run tests
         run: npm test
-      - name: Syntax check browser modules
+      - name: Syntax check browser and release modules
         run: |
           node --check src/main.js
           node --check src/autosave.js
@@ -39,7 +39,19 @@ jobs:
           node --check src/game/GrowJournal.js
           node --check src/game/KeeperCuttings.js
           node --check src/game/SaveStore.js
+          node --check scripts/build-release.mjs
+          node --check scripts/validate-release.mjs
+      - name: Build production artifact
+        run: npm run build
+      - name: Validate production artifact
+        run: npm run validate:release
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Run browser acceptance
         run: npm run test:e2e
+      - name: Upload production build
+        uses: actions/upload-artifact@v4
+        with:
+          name: thc-rpg-production-build
+          path: dist/
+          if-no-files-found: error

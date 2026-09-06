@@ -4,7 +4,7 @@ A browser-based cultivation RPG vertical slice for the DTF game hub.
 
 ## Status
 
-**Playable vertical slice in active development.**
+**Playable release-candidate vertical slice in active development.**
 
 The current build includes:
 
@@ -21,6 +21,7 @@ The current build includes:
 - Local save/load with backward-compatible version 1 → version 6 migration; clone inventory is additive within the existing v6 schema
 - Responsive mobile controls, keyboard shortcuts, reduced-motion support, and accessible dialogs
 - Core engine regression tests plus desktop/mobile Playwright browser acceptance
+- Route-safe production artifact contract for `/games/thc-rpg/`
 
 ## Run locally
 
@@ -31,16 +32,29 @@ npm start
 
 Open `http://localhost:3000`.
 
-## Test
+## Test and release validation
 
 ```bash
 npm test
 npm run test:e2e
+npm run build
+npm run validate:release
 ```
+
+`npm run build` creates a self-contained `dist/` containing only the visitor runtime. CI validates that bundle and uploads it as `thc-rpg-production-build`.
+
+The machine-readable release contract is `public/game-release.json`. It intentionally remains `release-candidate`: central DTFSeeds packaging and exact live-route verification are still required before production-ready status.
 
 ## Structure
 
 ```text
+public/
+└── game-release.json
+
+scripts/
+├── build-release.mjs
+└── validate-release.mjs
+
 src/
 ├── data/game-data.json
 ├── game/
@@ -70,8 +84,8 @@ tests/
 
 ## Deployment model
 
-This project is intentionally framework-free and can be served as static files. Asset and data URLs are relative so the game can live under a route such as `/games/thc-rpg/` rather than requiring the domain root.
+This project is intentionally framework-free and can be served as static files. Asset and data URLs are relative so the game can live under `/games/thc-rpg/` rather than requiring the domain root. Production integration should consume the exact green `thc-rpg-production-build` artifact or rebuild the exact verified canonical revision; it should not hand-copy an unverified source snapshot.
 
 ## Current production milestone
 
-Build on the Keeper → cutting → repeat-phenotype loop with breeding/lineage decisions, additional quests and locations, stronger production art, and deeper browser/mobile QA without breaking save compatibility.
+Land the standalone artifact contract, pin the exact green revision in central THC, package it through the DTFSeeds public suite, and verify the live route. Gameplay development can then continue with breeding/lineage decisions, additional quests and locations, stronger production art, and deeper browser/mobile QA without breaking save compatibility.

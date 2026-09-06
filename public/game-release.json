@@ -1,0 +1,29 @@
+{
+  "id": "thc-rpg",
+  "title": "THC RPG — The First Seed",
+  "route": "/games/thc-rpg/",
+  "runtime": "static-es-modules",
+  "status": "release-candidate",
+  "version": "2.0.0",
+  "players": "1",
+  "input": ["keyboard", "mouse", "touch"],
+  "artifact": "thc-rpg-production-build",
+  "saveVersion": 6,
+  "features": [
+    "quest-driven cultivation RPG vertical slice",
+    "deterministic phenotype variation",
+    "environment and equipment simulation",
+    "persistent Pheno Grow Journal",
+    "Keeper selection",
+    "Keeper cutting propagation and exact phenotype replanting",
+    "backward-compatible save migration",
+    "desktop and mobile browser acceptance"
+  ],
+  "promotionGate": {
+    "standaloneCI": "required",
+    "browserAcceptance": "required",
+    "routeValidation": "required",
+    "centralPackaging": "required",
+    "liveVerification": "required-before-production-ready"
+  }
+}
