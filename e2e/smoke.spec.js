@@ -25,8 +25,9 @@ test('boots, completes onboarding, opens inventory and journal, and saves', asyn
 
   const welcome = page.getByRole('dialog', { name: /Welcome, Grower/i });
   await expect(welcome).toBeVisible();
-  await welcome.getByRole('button', { name: 'Close' }).click();
+  await welcome.getByRole('button', { name: /Go to Main Street/i }).click();
   await expect(welcome).toBeHidden();
+  await expect(page.locator('#sceneContent')).toContainText('Main Street');
 
   await page.getByRole('button', { name: 'Open inventory' }).click();
   const inventory = page.getByRole('dialog', { name: /Inventory/i });
@@ -42,6 +43,11 @@ test('boots, completes onboarding, opens inventory and journal, and saves', asyn
   await expect(journal).toBeHidden();
 
   await page.getByRole('button', { name: /Save game/i }).click();
+  const saveDialog = page.getByRole('dialog', { name: /Saved!/i });
+  await expect(saveDialog).toBeVisible();
+  await saveDialog.getByRole('button', { name: 'Close' }).click();
+  await expect(saveDialog).toBeHidden();
+
   const hasSave = await page.evaluate(() => Object.keys(localStorage).some(key => key.toLowerCase().includes('thc') || key.toLowerCase().includes('save')));
   expect(hasSave).toBe(true);
   expect(errors).toEqual([]);
