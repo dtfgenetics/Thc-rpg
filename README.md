@@ -16,10 +16,11 @@ The current build includes:
 - The First Seed quest chain with objective tracking and one-time rewards
 - Inventory, XP, levels, currency, harvesting, NPC dialog, and location travel
 - Persistent **Pheno Grow Journal** records for every harvest, including phenotype seed, traits, yield, quality, room score, vigor, resilience, and flowering expression
-- Keeper marking so standout harvested phenotypes remain identified for future clone/breeding systems
-- Local save/load with backward-compatible version 1 → version 6 migration
+- Keeper marking so standout harvested phenotypes remain identified after harvest
+- **Keeper cutting propagation:** marked Keepers can maintain preserved cutting stock and replant a cutting using the exact saved phenotype seed, creating a real selection payoff while explicitly treating the preserved cutting as a pre-harvest gameplay abstraction
+- Local save/load with backward-compatible version 1 → version 6 migration; clone inventory is additive within the existing v6 schema
 - Responsive mobile controls, keyboard shortcuts, reduced-motion support, and accessible dialogs
-- Core engine regression tests plus Playwright browser acceptance
+- Core engine regression tests plus desktop/mobile Playwright browser acceptance
 
 ## Run locally
 
@@ -48,6 +49,7 @@ src/
 │   ├── Game.js
 │   ├── GrowJournal.js
 │   ├── Inventory.js
+│   ├── KeeperCuttings.js
 │   ├── Phenotype.js
 │   ├── Plant.js
 │   └── SaveStore.js
@@ -57,11 +59,13 @@ src/
 └── styles.css
 
 e2e/
+├── keeper-cuttings.spec.js
 └── smoke.spec.js
 
 tests/
 ├── game.test.js
-└── grow-journal.test.js
+├── grow-journal.test.js
+└── keeper-cuttings.test.js
 ```
 
 ## Deployment model
@@ -70,4 +74,4 @@ This project is intentionally framework-free and can be served as static files. 
 
 ## Current production milestone
 
-Use the persistent keeper/journal data to build the next cultivation-RPG loop: cloning and keeper selection, breeding/lineage decisions, additional quests and locations, stronger production art, and deeper browser/mobile QA without breaking save compatibility.
+Build on the Keeper → cutting → repeat-phenotype loop with breeding/lineage decisions, additional quests and locations, stronger production art, and deeper browser/mobile QA without breaking save compatibility.
