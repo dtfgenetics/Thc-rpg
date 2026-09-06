@@ -187,6 +187,7 @@ function closeJournal() {
 function handleKeeper(button, current) {
     if (!current.toggleGrowJournalKeeper(button.dataset.journalKeeper)) return;
     persistCurrentGame();
+    notifyGameChanged();
     announce('Keeper selection updated and saved.');
     renderJournal();
 }
@@ -198,6 +199,7 @@ function handleArchiveCutting(button, current) {
         return;
     }
     persistCurrentGame();
+    notifyGameChanged();
     announce(`Cutting propagated. ${result.count} ready from this Keeper stock.`);
     renderJournal();
 }
