@@ -23,11 +23,11 @@ function completeChecks(game, count) {
 }
 
 describe('THC RPG Keeper campaign expansion', () => {
-    it('extends the three-chapter campaign without mutating base game data', () => {
-        const game = new Game('Campaign Tester', baseGameData);
+    it('extends the loaded campaign catalog for both engine and browser consumers', () => {
         assert.equal(Object.keys(baseGameData.quests).length, 3);
-        assert.equal(baseGameData.quests.phenotype_hunt.nextQuest, null);
-        assert.equal(Object.keys(game.gameData.quests).length, 6);
+        const game = new Game('Campaign Tester', baseGameData);
+        assert.equal(Object.keys(baseGameData.quests).length, 6);
+        assert.equal(baseGameData, game.gameData);
         assert.equal(game.gameData.quests.phenotype_hunt.nextQuest, 'keeper_standard');
         assert.deepEqual(game.gameData.quests.keeper_standard, KEEPER_CAMPAIGN_QUESTS.keeper_standard);
         assert.deepEqual(game.gameData.genetics.zestberry, ZESTBERRY_GENETICS);
