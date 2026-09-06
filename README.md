@@ -9,13 +9,17 @@ A browser-based cultivation RPG vertical slice for the DTF game hub.
 The current build includes:
 
 - Vanilla JavaScript ES-module browser runtime
-- Blue Mango and Blue Bubblegum genetics data
-- Plant growth, hydration, stress, health, yield, and quality simulation
-- The First Seed quest with objective tracking and one-time rewards
+- Blue Mango and Blue Bubblegum genetics data with deterministic phenotype variation
+- Plant growth, hydration, stress, health, yield, quality, resilience, and environment-response simulation
+- Equipment-driven grow-room controls for temperature, humidity, light, pH, and EC
+- Equipment purchasing/equipping with progression-based control precision
+- The First Seed quest chain with objective tracking and one-time rewards
 - Inventory, XP, levels, currency, harvesting, NPC dialog, and location travel
-- Local save/load with version 1 → version 2 migration
-- Responsive mobile controls and accessible dialogs
-- Regression tests for the core game engine
+- Persistent **Pheno Grow Journal** records for every harvest, including phenotype seed, traits, yield, quality, room score, vigor, resilience, and flowering expression
+- Keeper marking so standout harvested phenotypes remain identified for future clone/breeding systems
+- Local save/load with backward-compatible version 1 → version 6 migration
+- Responsive mobile controls, keyboard shortcuts, reduced-motion support, and accessible dialogs
+- Core engine regression tests plus Playwright browser acceptance
 
 ## Run locally
 
@@ -30,6 +34,7 @@ Open `http://localhost:3000`.
 
 ```bash
 npm test
+npm run test:e2e
 ```
 
 ## Structure
@@ -38,14 +43,25 @@ npm test
 src/
 ├── data/game-data.json
 ├── game/
+│   ├── Environment.js
+│   ├── Equipment.js
 │   ├── Game.js
+│   ├── GrowJournal.js
+│   ├── Inventory.js
+│   ├── Phenotype.js
 │   ├── Plant.js
-│   └── Inventory.js
+│   └── SaveStore.js
+├── autosave.js
+├── grow-journal-ui.js
 ├── main.js
 └── styles.css
 
+e2e/
+└── smoke.spec.js
+
 tests/
-└── game.test.js
+├── game.test.js
+└── grow-journal.test.js
 ```
 
 ## Deployment model
@@ -54,4 +70,4 @@ This project is intentionally framework-free and can be served as static files. 
 
 ## Current production milestone
 
-Finish browser QA for the vertical slice, then expand the simulation with phenotype variation, equipment/environment systems, additional quests, and production art without breaking save compatibility.
+Use the persistent keeper/journal data to build the next cultivation-RPG loop: cloning and keeper selection, breeding/lineage decisions, additional quests and locations, stronger production art, and deeper browser/mobile QA without breaking save compatibility.
