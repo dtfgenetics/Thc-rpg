@@ -13,6 +13,7 @@ export function archiveKeeperCutting(game, recordId) {
     const eligibility = canArchiveKeeperCutting(game, recordId);
     if (!eligibility.ok) return eligibility;
     if (!game.inventory.add('clone', recordId, 1)) return { ok: false, reason: 'inventory_rejected' };
+    game.recordObjective?.('archive_keeper_cutting', eligibility.record.geneticsId);
     return {
         ok: true,
         record: eligibility.record,
@@ -40,6 +41,7 @@ export function plantKeeperCutting(game, recordId, now = Date.now()) {
     try {
         game.plant = new Plant(genetics, now, record.phenotypeSeed);
         game.time = now;
+        game.recordObjective?.('plant_keeper_cutting', record.geneticsId);
         return {
             ok: true,
             record,
