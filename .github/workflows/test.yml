@@ -37,6 +37,7 @@ jobs:
           node --check src/game/Equipment.js
           node --check src/game/Inventory.js
           node --check src/game/GrowJournal.js
+          node --check src/game/KeeperCuttings.js
           node --check src/game/SaveStore.js
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
