@@ -17,6 +17,7 @@
         #loadError { display: none; max-width: 460px; color: #ff8f8f; text-align: center; font-size: 13px; line-height: 1.5; }
     </style>
     <link rel="stylesheet" href="./src/styles.css" />
+    <link rel="stylesheet" href="./src/grow-journal-v1.css" />
 </head>
 <body>
     <div id="loading" role="status" aria-live="polite" aria-label="Loading THC RPG">
@@ -53,6 +54,7 @@
             <button type="button" id="btnWater">💧 Water</button>
             <button type="button" class="btn-gold" id="btnHarvest">🌾 Harvest</button>
             <button type="button" class="btn-accent" id="btnInventory" aria-label="Open inventory">📦</button>
+            <button type="button" class="btn-accent" id="btnJournal" aria-label="Open pheno grow journal" title="Pheno Journal (J)">🧬</button>
             <button type="button" id="btnSave" aria-label="Save game (autosave enabled)" title="Autosaves every 30 seconds">💾</button>
         </nav>
 
@@ -87,10 +89,21 @@
                 <button type="button" class="modal-close" id="inventoryClose">Close</button>
             </div>
         </div>
+
+        <div id="journalModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="journalTitle">
+            <div class="modal-box">
+                <h2 id="journalTitle">🧬 Pheno Grow Journal</h2>
+                <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px;">Every harvest records its phenotype and outcome. Mark standout runs as Keepers for future selection systems.</p>
+                <div id="journalList"></div>
+                <p id="journalStatus" aria-live="polite"></p>
+                <button type="button" class="modal-close" id="journalClose">Close</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="./src/autosave.js"></script>
     <script type="module" src="./src/main.js"></script>
     <script type="module" src="./src/progression-feedback.js"></script>
+    <script type="module" src="./src/grow-journal-ui.js"></script>
 </body>
 </html>
