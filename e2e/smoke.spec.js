@@ -9,7 +9,7 @@ function collectErrors(page) {
   return errors;
 }
 
-test('boots, completes onboarding, opens inventory, and saves', async ({ page }) => {
+test('boots, completes onboarding, opens inventory and journal, and saves', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
 
@@ -33,6 +33,13 @@ test('boots, completes onboarding, opens inventory, and saves', async ({ page })
   await expect(inventory).toBeVisible();
   await inventory.getByRole('button', { name: 'Close' }).click();
   await expect(inventory).toBeHidden();
+
+  await page.getByRole('button', { name: 'Open pheno grow journal' }).click();
+  const journal = page.getByRole('dialog', { name: /Pheno Grow Journal/i });
+  await expect(journal).toBeVisible();
+  await expect(journal.getByText('No harvests recorded yet.')).toBeVisible();
+  await journal.getByRole('button', { name: 'Close' }).click();
+  await expect(journal).toBeHidden();
 
   await page.getByRole('button', { name: /Save game/i }).click();
   const hasSave = await page.evaluate(() => Object.keys(localStorage).some(key => key.toLowerCase().includes('thc') || key.toLowerCase().includes('save')));
