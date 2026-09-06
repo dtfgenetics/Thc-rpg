@@ -1,6 +1,7 @@
 export class Inventory {
     constructor() {
         this.seed = {};
+        this.clone = {};
         this.item = {};
         this.harvest = {};
     }
@@ -43,6 +44,7 @@ export class Inventory {
     save() {
         return {
             seed: { ...this.seed },
+            clone: { ...this.clone },
             item: { ...this.item },
             harvest: { ...this.harvest }
         };
@@ -50,6 +52,7 @@ export class Inventory {
 
     load(data = {}) {
         this.seed = { ...(data.seed || {}) };
+        this.clone = { ...(data.clone || {}) };
         this.item = { ...(data.item || {}) };
         this.harvest = { ...(data.harvest || {}) };
     }
