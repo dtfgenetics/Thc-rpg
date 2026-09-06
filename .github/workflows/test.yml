@@ -38,6 +38,7 @@ jobs:
           node --check src/game/Inventory.js
           node --check src/game/GrowJournal.js
           node --check src/game/KeeperCuttings.js
+          node --check src/game/CampaignChapters.js
           node --check src/game/SaveStore.js
           node --check scripts/build-release.mjs
           node --check scripts/validate-release.mjs
