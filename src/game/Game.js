@@ -3,6 +3,7 @@ import { Inventory } from './Inventory.js';
 import { Environment } from './Environment.js';
 import { Equipment } from './Equipment.js';
 import { GrowJournal } from './GrowJournal.js';
+import { applyCampaignExpansion } from './CampaignChapters.js';
 
 const objectiveKey = (objective, index) => objective.id || `${objective.type}:${objective.target || 'any'}:${index}`;
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -15,7 +16,7 @@ export class Game {
             throw new Error('Game requires valid game data');
         }
 
-        this.gameData = gameData;
+        this.gameData = applyCampaignExpansion(gameData);
         this.player = {
             name: name || 'Green Thumb',
             level: 1,
@@ -104,7 +105,10 @@ export class Game {
     }
 
     toggleGrowJournalKeeper(id, value = undefined) {
-        return this.growJournal.toggleKeeper(id, value);
+        if (!this.growJournal.toggleKeeper(id, value)) return false;
+        const record = this.growJournal.get(id);
+        if (record?.keeper) this.recordObjective('select_keeper', record.geneticsId);
+        return true;
     }
 
     plantSeed(id, phenotypeSeed = undefined) {
@@ -225,6 +229,16 @@ export class Game {
 
         const advancedCount = this.equipment.getOwnedTierCount(2);
         changed = this.recordObjectiveValue('advanced_equipment_owned', null, advancedCount) || changed;
+
+        const cuttingCountByGenetics = new Map();
+        for (const record of this.growJournal.getAll()) {
+            if (record.keeper) changed = this.recordObjective('select_keeper', record.geneticsId) || changed;
+            const count = this.inventory.get('clone', record.id);
+            if (count > 0) cuttingCountByGenetics.set(record.geneticsId, (cuttingCountByGenetics.get(record.geneticsId) || 0) + count);
+        }
+        for (const [geneticsId, count] of cuttingCountByGenetics) {
+            changed = this.recordObjectiveValue('archive_keeper_cutting', geneticsId, count) || changed;
+        }
 
         return changed;
     }
