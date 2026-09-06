@@ -2,6 +2,7 @@ import { Plant } from './Plant.js';
 import { Inventory } from './Inventory.js';
 import { Environment } from './Environment.js';
 import { Equipment } from './Equipment.js';
+import { GrowJournal } from './GrowJournal.js';
 
 const objectiveKey = (objective, index) => objective.id || `${objective.type}:${objective.target || 'any'}:${index}`;
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -26,11 +27,12 @@ export class Game {
         this.inventory = new Inventory();
         this.environment = new Environment();
         this.equipment = new Equipment(this.gameData.equipment || {});
+        this.growJournal = new GrowJournal();
         this.plant = null;
         this.quests = { active: [], completed: [], progress: {} };
         this.location = 'grow_room';
         this.time = 0;
-        this.saveVersion = 5;
+        this.saveVersion = 6;
 
         this.inventory.add('item', 'basic_soil', 1);
         this.inventory.add('item', 'small_pot', 1);
@@ -97,6 +99,14 @@ export class Game {
         return this.equipment.equip(id);
     }
 
+    getGrowJournal() {
+        return this.growJournal.getAll();
+    }
+
+    toggleGrowJournalKeeper(id, value = undefined) {
+        return this.growJournal.toggleKeeper(id, value);
+    }
+
     plantSeed(id, phenotypeSeed = undefined) {
         if (this.plant) return false;
 
@@ -126,12 +136,20 @@ export class Game {
         this.player.money += moneyGain;
         this.addXP(xpGain);
 
+        const journalEntry = this.growJournal.record({
+            plant: this.plant,
+            yieldAmount: yieldAmt,
+            quality,
+            harvestedAt: this.time || Date.now()
+        });
+
         const result = {
             geneticsId,
             yield: yieldAmt,
             quality,
             xp: xpGain,
-            money: moneyGain
+            money: moneyGain,
+            journalEntry
         };
 
         this.plant = null;
@@ -339,6 +357,7 @@ export class Game {
             inventory: this.inventory.save(),
             environment: this.environment.save(),
             equipment: this.equipment.save(),
+            growJournal: this.growJournal.save(),
             plant: this.plant ? this.plant.save() : null,
             quests: {
                 active: [...this.quests.active],
@@ -351,7 +370,7 @@ export class Game {
     }
 
     load(data) {
-        if (![1, 2, 3, 4, 5].includes(data?.version)) throw new Error('Unsupported save version');
+        if (![1, 2, 3, 4, 5, 6].includes(data?.version)) throw new Error('Unsupported save version');
 
         const defaults = this.player;
         this.player = { ...defaults, ...(data.player || {}) };
@@ -364,6 +383,7 @@ export class Game {
         this.environment = new Environment(data.environment || {});
         this.equipment = new Equipment(this.gameData.equipment || {});
         this.equipment.load(data.equipment || {});
+        this.growJournal = new GrowJournal(data.growJournal || []);
 
         if (data.plant) {
             const geneticsId = data.plant.geneticsId || data.plant.genetics?.id;
