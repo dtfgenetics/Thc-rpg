@@ -6,22 +6,36 @@ A browser-based cultivation RPG vertical slice for the DTF game hub.
 
 **Playable release-candidate vertical slice in active development.**
 
-The current build includes:
+The 2.1 campaign expands the original three-chapter grow loop into six connected chapters and makes Keeper selection a required progression mechanic rather than a detached journal feature.
+
+## Current campaign
+
+1. **The First Seed** — begin the grow loop and establish the first Blue Mango plant.
+2. **Dial It In** — learn environmental control and upgrade the grow room.
+3. **Phenotype Hunt** — work through Mango Bubbles phenotype variation and quality selection.
+4. **Keeper Standard** — mark a Mango Bubbles harvest as a Keeper and preserve cutting stock from that exact phenotype.
+5. **Clone Proof** — replant the exact Keeper phenotype, hold a stable room, and prove it with another high-quality harvest.
+6. **Zestberry Trial** — unlock Zestberry, build the full advanced room, maintain control, and finish the first post-selection genetics trial.
+
+## Current systems
 
 - Vanilla JavaScript ES-module browser runtime
-- Blue Mango and Blue Bubblegum genetics data with deterministic phenotype variation
+- Blue Mango, Blue Bubblegum, Mango Bubbles, and unlockable Zestberry genetics with deterministic phenotype variation
 - Plant growth, hydration, stress, health, yield, quality, resilience, and environment-response simulation
 - Equipment-driven grow-room controls for temperature, humidity, light, pH, and EC
 - Equipment purchasing/equipping with progression-based control precision
-- The First Seed quest chain with objective tracking and one-time rewards
+- Six-chapter quest chain with prerequisites, objective tracking, one-time rewards, genetics unlocks, and advanced-room requirements
 - Inventory, XP, levels, currency, harvesting, NPC dialog, and location travel
 - Persistent **Pheno Grow Journal** records for every harvest, including phenotype seed, traits, yield, quality, room score, vigor, resilience, and flowering expression
-- Keeper marking so standout harvested phenotypes remain identified after harvest
-- **Keeper cutting propagation:** marked Keepers can maintain preserved cutting stock and replant a cutting using the exact saved phenotype seed, creating a real selection payoff while explicitly treating the preserved cutting as a pre-harvest gameplay abstraction
-- Local save/load with backward-compatible version 1 → version 6 migration; clone inventory is additive within the existing v6 schema
+- Keeper marking that now records campaign progress when the correct genetics are selected
+- **Keeper cutting propagation:** marked Keepers can maintain preserved cutting stock and replant a cutting using the exact saved phenotype seed
+- Quest reconstruction for existing Keeper/cutting stock so a player does not lose credit simply because the new chapter starts after selection work was already performed
+- Local save/load with backward-compatible version 1 → version 6 migration; campaign expansion remains additive within the existing v6 save schema
 - Responsive mobile controls, keyboard shortcuts, reduced-motion support, and accessible dialogs
 - Core engine regression tests plus desktop/mobile Playwright browser acceptance
 - Route-safe production artifact contract for `/games/thc-rpg/`
+
+The preserved-cutting mechanic is explicitly a game abstraction: marking a Keeper represents stock preserved before harvest rather than implying that harvested plant material can later be cloned.
 
 ## Run locally
 
@@ -43,7 +57,7 @@ npm run validate:release
 
 `npm run build` creates a self-contained `dist/` containing only the visitor runtime. CI validates that bundle and uploads it as `thc-rpg-production-build`.
 
-The machine-readable release contract is `public/game-release.json`. It intentionally remains `release-candidate`: central DTFSeeds packaging and exact live-route verification are still required before production-ready status.
+The machine-readable release contract is `public/game-release.json`. Each new canonical revision must pass standalone engine tests, route-safe build validation, desktop/mobile browser acceptance, central DTFSeeds packaging, and exact live-route verification before the DTFSeeds source pin advances.
 
 ## Structure
 
@@ -58,6 +72,7 @@ scripts/
 src/
 ├── data/game-data.json
 ├── game/
+│   ├── CampaignChapters.js
 │   ├── Environment.js
 │   ├── Equipment.js
 │   ├── Game.js
@@ -79,13 +94,14 @@ e2e/
 tests/
 ├── game.test.js
 ├── grow-journal.test.js
+├── keeper-campaign.test.js
 └── keeper-cuttings.test.js
 ```
 
 ## Deployment model
 
-This project is intentionally framework-free and can be served as static files. Asset and data URLs are relative so the game can live under `/games/thc-rpg/` rather than requiring the domain root. Production integration should consume the exact green `thc-rpg-production-build` artifact or rebuild the exact verified canonical revision; it should not hand-copy an unverified source snapshot.
+This project is intentionally framework-free and can be served as static files. Asset and data URLs are relative so the game can live under `/games/thc-rpg/` rather than requiring the domain root. Production integration should rebuild the exact verified canonical revision or consume its green `thc-rpg-production-build`; it should never hand-copy an unverified source snapshot.
 
-## Current production milestone
+## Next gameplay expansion areas
 
-Land the standalone artifact contract, pin the exact green revision in central THC, package it through the DTFSeeds public suite, and verify the live route. Gameplay development can then continue with breeding/lineage decisions, additional quests and locations, stronger production art, and deeper browser/mobile QA without breaking save compatibility.
+After the 2.1 campaign is stable, the next high-value gameplay work is deeper location progression, breeding/lineage decisions that consume proven Keeper history, additional genetics trials, equipment tradeoffs, stronger NPC chapter-specific dialog, and richer production art/audio feedback without breaking save compatibility.
