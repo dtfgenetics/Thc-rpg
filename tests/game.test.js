@@ -279,7 +279,7 @@ describe('Game', () => {
         assert.equal(game.player.money, beforeMoney + harvest.money + 50);
     });
 
-    it('round-trips version 5 saves with environment, phenotype, and equipment', () => {
+    it('round-trips version 6 saves with environment, phenotype, equipment, and grow journal state', () => {
         const game = new Game('Test', gameData);
         game.player.money = 200;
         assert.equal(game.purchaseEquipment('precision_meter'), true);
@@ -288,7 +288,8 @@ describe('Game', () => {
         game.plantSeed('blue_mango', 987654321);
         game.setEnvironment('temperature', 81);
         const saved = game.save();
-        assert.equal(saved.version, 5);
+        assert.equal(saved.version, 6);
+        assert.deepEqual(saved.growJournal, []);
         assert.equal(saved.equipment.equipped.monitoring, 'precision_meter');
         assert.equal(saved.equipment.equipped.lighting, 'adjustable_fixture');
 
@@ -298,6 +299,7 @@ describe('Game', () => {
         assert.equal(loaded.plant.phenotype.seed, 987654321);
         assert.deepEqual(loaded.environment.save(), saved.environment);
         assert.deepEqual(loaded.equipment.save(), saved.equipment);
+        assert.deepEqual(loaded.getGrowJournal(), []);
         assert.equal(loaded.getEnvironmentControlStep('ph'), 0.1);
         assert.equal(loaded.getEnvironmentControlStep('light'), 5);
     });
@@ -307,6 +309,7 @@ describe('Game', () => {
         const legacy = source.save();
         legacy.version = 4;
         delete legacy.equipment;
+        delete legacy.growJournal;
         legacy.player.money = 77;
 
         const game = new Game('Other', gameData);
@@ -315,20 +318,23 @@ describe('Game', () => {
         assert.equal(game.equipment.getEquipped('lighting').id, 'starter_fixture');
         assert.equal(game.equipment.getEquipped('climate').id, 'basic_ventilation');
         assert.equal(game.equipment.getEquipped('monitoring').id, 'basic_meter');
-        assert.equal(game.save().version, 5);
+        assert.deepEqual(game.getGrowJournal(), []);
+        assert.equal(game.save().version, 6);
     });
 
-    it('migrates version 3 saves into default environment and starter equipment', () => {
+    it('migrates version 3 saves into default environment, starter equipment, and empty journal', () => {
         const source = new Game('V3', gameData);
         const legacy = source.save();
         legacy.version = 3;
         delete legacy.environment;
         delete legacy.equipment;
+        delete legacy.growJournal;
         const game = new Game('Other', gameData);
         game.load(legacy);
         assert.deepEqual(game.environment.save(), new Environment().save());
         assert.equal(game.equipment.has('starter_fixture'), true);
-        assert.equal(game.save().version, 5);
+        assert.deepEqual(game.getGrowJournal(), []);
+        assert.equal(game.save().version, 6);
     });
 
     it('migrates version 1 money and embedded plant genetics', () => {
@@ -346,7 +352,8 @@ describe('Game', () => {
         assert.equal(game.plant.geneticsId, 'blue_mango');
         assert.equal(game.plant.health, 0);
         assert.equal(game.plant.hydration, 0);
-        assert.equal(game.save().version, 5);
+        assert.deepEqual(game.getGrowJournal(), []);
+        assert.equal(game.save().version, 6);
     });
 
     it('rejects unsupported save versions', () => {
