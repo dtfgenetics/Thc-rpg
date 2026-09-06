@@ -32,6 +32,7 @@ const expected = {
   route: '/games/thc-rpg/',
   runtime: 'static-es-modules',
   status: 'release-candidate',
+  version: '2.1.0',
   artifact: 'thc-rpg-production-build',
   saveVersion: 6
 };
@@ -45,6 +46,14 @@ if (!Array.isArray(release.input) || !release.input.includes('touch') || !releas
 if (release.promotionGate?.liveVerification !== 'required-before-production-ready') {
   errors.push('live verification must remain required before production-ready');
 }
+for (const feature of [
+  'six-chapter cultivation RPG progression',
+  'Keeper selection with quest progression',
+  'Clone Proof post-selection chapter',
+  'Zestberry genetics unlock and advanced trial chapter'
+]) {
+  if (!release.features?.includes(feature)) errors.push(`game-release features must include ${JSON.stringify(feature)}`);
+}
 
 for (const required of [
   'index.html',
@@ -57,7 +66,8 @@ for (const required of [
   'src/data/game-data.json',
   'src/game/Game.js',
   'src/game/GrowJournal.js',
-  'src/game/KeeperCuttings.js'
+  'src/game/KeeperCuttings.js',
+  'src/game/CampaignChapters.js'
 ]) {
   if (!await exists(new URL(required, dist))) errors.push(`dist missing ${required}`);
 }
@@ -104,4 +114,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`THC RPG release valid: ${release.route} -> ${release.artifact}, save v${release.saveVersion}.`);
+console.log(`THC RPG release valid: ${release.route} -> ${release.artifact}, version ${release.version}, save v${release.saveVersion}.`);
