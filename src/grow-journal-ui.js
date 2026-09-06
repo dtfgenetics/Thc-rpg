@@ -1,5 +1,11 @@
 import { Game } from './game/Game.js';
 import { SaveStore } from './game/SaveStore.js';
+import {
+    archiveKeeperCutting,
+    canArchiveKeeperCutting,
+    canPlantKeeperCutting,
+    plantKeeperCutting
+} from './game/KeeperCuttings.js';
 
 const saves = new SaveStore(localStorage);
 const openButton = document.getElementById('btnJournal');
@@ -19,6 +25,14 @@ function makeElement(tag, className = '', text = '') {
     return element;
 }
 
+function announce(message) {
+    if (status) status.textContent = message;
+}
+
+function notifyGameChanged() {
+    document.dispatchEvent(new CustomEvent('thc-rpg:external-state-change'));
+}
+
 function persistCurrentGame() {
     const current = Game.current;
     if (!current) return false;
@@ -30,6 +44,55 @@ function persistCurrentGame() {
     }
 }
 
+function cuttingCount(current, recordId) {
+    return current?.inventory?.get?.('clone', recordId) || 0;
+}
+
+function renderCuttingActions(card, current, record) {
+    if (!record.keeper) return;
+
+    const section = makeElement('div', 'journal-cutting-section');
+    const count = cuttingCount(current, record.id);
+    const heading = makeElement('div', 'journal-cutting-heading');
+    heading.append(
+        makeElement('strong', '', 'Keeper stock'),
+        makeElement('span', 'journal-cutting-count', `${count} cutting${count === 1 ? '' : 's'} ready`)
+    );
+    section.append(heading);
+
+    const note = makeElement(
+        'p',
+        'journal-cutting-note',
+        'Game abstraction: marking a Keeper assumes a cutting was preserved before harvest. Propagated cuttings reproduce this phenotype seed.'
+    );
+    section.append(note);
+
+    const actions = makeElement('div', 'journal-clone-actions');
+    const archiveCheck = canArchiveKeeperCutting(current, record.id);
+    const archiveButton = makeElement('button', 'journal-cutting-button', '✂️ Propagate Cutting');
+    archiveButton.type = 'button';
+    archiveButton.dataset.journalArchiveCutting = record.id;
+    archiveButton.disabled = !archiveCheck.ok;
+    archiveButton.title = archiveCheck.ok ? 'Add one cutting from preserved Keeper stock.' : 'Keeper stock is unavailable.';
+    actions.append(archiveButton);
+
+    const plantCheck = canPlantKeeperCutting(current, record.id);
+    const plantButton = makeElement('button', 'journal-cutting-button primary', '🌱 Plant Cutting');
+    plantButton.type = 'button';
+    plantButton.dataset.journalPlantCutting = record.id;
+    plantButton.disabled = !plantCheck.ok;
+    const reasons = {
+        grow_room_required: 'Travel to the Grow Room first.',
+        grow_space_occupied: 'Harvest or clear the current plant first.',
+        cutting_required: 'Propagate a cutting first.',
+        keeper_required: 'Mark this phenotype as a Keeper first.'
+    };
+    plantButton.title = plantCheck.ok ? 'Plant this cutting with the saved phenotype seed.' : (reasons[plantCheck.reason] || 'This cutting cannot be planted yet.');
+    actions.append(plantButton);
+    section.append(actions);
+    card.append(section);
+}
+
 function renderJournal() {
     if (!list) return;
     const current = Game.current;
@@ -38,9 +101,10 @@ function renderJournal() {
 
     const summary = makeElement('div', 'journal-summary');
     const keeperCount = records.filter(record => record.keeper).length;
+    const totalCuttings = records.reduce((sum, record) => sum + cuttingCount(current, record.id), 0);
     summary.append(
         makeElement('strong', '', `${records.length} recorded grow${records.length === 1 ? '' : 's'}`),
-        makeElement('span', '', `${keeperCount} keeper${keeperCount === 1 ? '' : 's'} marked`)
+        makeElement('span', '', `${keeperCount} keeper${keeperCount === 1 ? '' : 's'} · ${totalCuttings} cutting${totalCuttings === 1 ? '' : 's'}`)
     );
     list.append(summary);
 
@@ -95,6 +159,8 @@ function renderJournal() {
         }
         card.append(traits);
 
+        renderCuttingActions(card, current, record);
+
         if (record.harvestedAt) {
             const date = new Date(record.harvestedAt);
             if (!Number.isNaN(date.getTime())) card.append(makeElement('small', 'journal-date', `Harvested ${date.toLocaleString()}`));
@@ -118,15 +184,52 @@ function closeJournal() {
     lastFocusedElement?.focus?.();
 }
 
+function handleKeeper(button, current) {
+    if (!current.toggleGrowJournalKeeper(button.dataset.journalKeeper)) return;
+    persistCurrentGame();
+    announce('Keeper selection updated and saved.');
+    renderJournal();
+}
+
+function handleArchiveCutting(button, current) {
+    const result = archiveKeeperCutting(current, button.dataset.journalArchiveCutting);
+    if (!result.ok) {
+        announce('That phenotype cannot produce Keeper stock yet.');
+        return;
+    }
+    persistCurrentGame();
+    announce(`Cutting propagated. ${result.count} ready from this Keeper stock.`);
+    renderJournal();
+}
+
+function handlePlantCutting(button, current) {
+    const result = plantKeeperCutting(current, button.dataset.journalPlantCutting);
+    if (!result.ok) {
+        const messages = {
+            grow_room_required: 'Travel to the Grow Room before planting a cutting.',
+            grow_space_occupied: 'The grow space is already occupied.',
+            cutting_required: 'Propagate a cutting from this Keeper first.',
+            keeper_required: 'This phenotype is not marked as a Keeper.'
+        };
+        announce(messages[result.reason] || 'The cutting could not be planted.');
+        renderJournal();
+        return;
+    }
+    persistCurrentGame();
+    notifyGameChanged();
+    announce(`${result.record.plantName} cutting planted with phenotype ${phenotypeSeedLabel(result.record.phenotypeSeed)}.`);
+    renderJournal();
+}
+
 openButton?.addEventListener('click', openJournal);
 closeButton?.addEventListener('click', closeJournal);
 list?.addEventListener('click', event => {
-    const button = event.target.closest('[data-journal-keeper]');
-    if (!button || !Game.current) return;
-    if (!Game.current.toggleGrowJournalKeeper(button.dataset.journalKeeper)) return;
-    persistCurrentGame();
-    if (status) status.textContent = 'Keeper selection updated and saved.';
-    renderJournal();
+    const button = event.target.closest('button');
+    const current = Game.current;
+    if (!button || !current) return;
+    if (button.dataset.journalKeeper) handleKeeper(button, current);
+    else if (button.dataset.journalArchiveCutting) handleArchiveCutting(button, current);
+    else if (button.dataset.journalPlantCutting) handlePlantCutting(button, current);
 });
 
 document.addEventListener('keydown', event => {
