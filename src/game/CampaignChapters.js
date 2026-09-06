@@ -67,10 +67,12 @@ export const KEEPER_CAMPAIGN_QUESTS = {
 
 export function applyCampaignExpansion(baseData) {
     if (!baseData?.genetics || !baseData?.quests) throw new Error('Campaign expansion requires genetics and quests');
-    const data = clone(baseData);
-    data.genetics.zestberry = clone(ZESTBERRY_GENETICS);
-    for (const [id, quest] of Object.entries(KEEPER_CAMPAIGN_QUESTS)) data.quests[id] = clone(quest);
-    if (data.quests.phenotype_hunt) data.quests.phenotype_hunt.nextQuest = 'keeper_standard';
-    data.schemaVersion = Math.max(Number(data.schemaVersion || 0), 7);
-    return data;
+
+    // Expand the loaded canonical data in place so both the engine and the existing browser UI
+    // share one campaign catalog. Reapplying is idempotent because keyed entries are replaced.
+    baseData.genetics.zestberry = clone(ZESTBERRY_GENETICS);
+    for (const [id, quest] of Object.entries(KEEPER_CAMPAIGN_QUESTS)) baseData.quests[id] = clone(quest);
+    if (baseData.quests.phenotype_hunt) baseData.quests.phenotype_hunt.nextQuest = 'keeper_standard';
+    baseData.schemaVersion = Math.max(Number(baseData.schemaVersion || 0), 7);
+    return baseData;
 }
