@@ -25,7 +25,10 @@ assert.match(styles, /#sceneContent[\s\S]*overflow-y:\s*auto/, 'scene content mu
 assert.match(main, /window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches/, 'particle renderer must honor reduced motion');
 assert.match(main, /document\.addEventListener\('keydown'/, 'keyboard play controls must remain wired');
 assert.match(main, /event\.target instanceof HTMLInputElement/, 'keyboard shortcuts must not hijack text entry');
-for (const shortcut of ["case 'e'", "case 'p'", "case 'w'", "case 'h'", "case 'i'"]) {
+assert.match(main, /journalModal:\s*\$\('journalModal'\)/, 'main keyboard runtime must know about the journal overlay');
+assert.match(main, /\[refs\.dialogModal, refs\.inventoryModal, refs\.journalModal\]\.some\(modal => modal\?\.style\.display === 'flex'\)/, 'gameplay shortcuts must detect every active gameplay overlay');
+assert.match(main, /!game \|\| gameplayOverlayOpen \|\| event\.target instanceof HTMLInputElement/, 'gameplay shortcuts must stop while a dialog, inventory, or journal overlay is open');
+for (const shortcut of ["case 'e'", "case 'p'", "case 'w'", "case 'h'", "case 'i'", "case 's'"]) {
   assert.ok(main.includes(shortcut), `missing keyboard shortcut ${shortcut}`);
 }
 assert.match(main, /localStorage\.setItem\(SAVE_KEY, JSON\.stringify\(game\.save\(\)\)\)/, 'manual save path must remain wired');
@@ -45,4 +48,4 @@ assert.equal(release.promotionGate?.liveVerification, 'required-before-productio
 assert.equal(release.promotionGate?.browserAcceptance, undefined, 'browser-runner acceptance must not remain a release gate');
 assert.ok(!release.features.some((feature) => /browser acceptance/i.test(feature)), 'release features must not advertise browser-runner acceptance');
 
-console.log('THC RPG deterministic UI and release contract valid.');
+console.log('THC RPG deterministic UI, modal input guard, and release contract valid.');
