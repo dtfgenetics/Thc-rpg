@@ -19,11 +19,12 @@
     "Clone Proof post-selection chapter",
     "Zestberry genetics unlock and advanced trial chapter",
     "backward-compatible save migration",
-    "desktop and mobile browser acceptance"
+    "responsive keyboard, mouse, and touch controls",
+    "deterministic shipped-UI validation"
   ],
   "promotionGate": {
     "standaloneCI": "required",
-    "browserAcceptance": "required",
+    "deterministicUiValidation": "required",
     "routeValidation": "required",
     "centralPackaging": "required",
     "liveVerification": "required-before-production-ready"
