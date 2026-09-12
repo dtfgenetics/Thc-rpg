@@ -32,7 +32,7 @@ The 2.1 campaign expands the original three-chapter grow loop into six connected
 - Quest reconstruction for existing Keeper/cutting stock so a player does not lose credit simply because the new chapter starts after selection work was already performed
 - Local save/load with backward-compatible version 1 → version 6 migration; campaign expansion remains additive within the existing v6 save schema
 - Responsive mobile controls, keyboard shortcuts, reduced-motion support, and accessible dialogs
-- Core engine regression tests plus desktop/mobile Playwright browser acceptance
+- Core engine regression tests plus deterministic shipped-UI validation
 - Route-safe production artifact contract for `/games/thc-rpg/`
 
 The preserved-cutting mechanic is explicitly a game abstraction: marking a Keeper represents stock preserved before harvest rather than implying that harvested plant material can later be cloned.
@@ -50,14 +50,16 @@ Open `http://localhost:3000`.
 
 ```bash
 npm test
-npm run test:e2e
+npm run validate:ui
 npm run build
 npm run validate:release
 ```
 
+`npm run validate:ui` checks the shipped browser contract directly: mobile safe-area behavior, 44px action targets, compact layouts, accessible modal surfaces, keyboard shortcut guards, reduced-motion behavior, save/load wiring, and the machine-readable release gate.
+
 `npm run build` creates a self-contained `dist/` containing only the visitor runtime. CI validates that bundle and uploads it as `thc-rpg-production-build`.
 
-The machine-readable release contract is `public/game-release.json`. Each new canonical revision must pass standalone engine tests, route-safe build validation, desktop/mobile browser acceptance, central DTFSeeds packaging, and exact live-route verification before the DTFSeeds source pin advances.
+The machine-readable release contract is `public/game-release.json`. Each new canonical revision must pass standalone engine tests, deterministic shipped-UI validation, route-safe build validation, central DTFSeeds packaging, and exact live-route verification before the DTFSeeds source pin advances.
 
 ## Structure
 
@@ -67,6 +69,7 @@ public/
 
 scripts/
 ├── build-release.mjs
+├── validate-ui-contract.mjs
 └── validate-release.mjs
 
 src/
@@ -86,10 +89,6 @@ src/
 ├── grow-journal-ui.js
 ├── main.js
 └── styles.css
-
-e2e/
-├── keeper-cuttings.spec.js
-└── smoke.spec.js
 
 tests/
 ├── game.test.js
