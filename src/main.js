@@ -14,7 +14,7 @@ const refs = {
     app: $('app'), loading: $('loading'), loadBar: $('loadBar'), loadText: $('loadText'), loadError: $('loadError'),
     startModal: $('startModal'), nameInput: $('nameInput'), startBtn: $('startBtn'), loadBtn: $('loadBtn'),
     dialogModal: $('dialogModal'), dialogTitle: $('dialogTitle'), dialogText: $('dialogText'), dialogChoices: $('dialogChoices'), dialogClose: $('dialogClose'),
-    inventoryModal: $('inventoryModal'), inventoryList: $('inventoryList'), inventoryClose: $('inventoryClose'),
+    inventoryModal: $('inventoryModal'), inventoryList: $('inventoryList'), inventoryClose: $('inventoryClose'), journalModal: $('journalModal'),
     playerName: $('playerName'), playerLevel: $('playerLevel'), playerXp: $('playerXp'), xpBar: $('xpBar'), playerMoney: $('playerMoney'),
     plantStatus: $('plantStatus'), plantHealth: $('plantHealth'), btnInteract: $('btnInteract'), btnPlant: $('btnPlant'), btnWater: $('btnWater'), btnHarvest: $('btnHarvest'),
     btnInventory: $('btnInventory'), btnSave: $('btnSave'), sceneContent: $('sceneContent'), particleCanvas: $('particleCanvas')
@@ -939,7 +939,8 @@ function bindEvents() {
             else if (refs.inventoryModal.style.display === 'flex') closeInventory();
             return;
         }
-        if (!game || event.target instanceof HTMLInputElement || event.ctrlKey || event.metaKey || event.altKey) return;
+        const gameplayOverlayOpen = [refs.dialogModal, refs.inventoryModal, refs.journalModal].some(modal => modal?.style.display === 'flex');
+        if (!game || gameplayOverlayOpen || event.target instanceof HTMLInputElement || event.ctrlKey || event.metaKey || event.altKey) return;
         switch (event.key.toLowerCase()) {
             case 'e': interact(); break;
             case 'p': plantSeed(); break;
