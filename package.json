@@ -8,13 +8,12 @@
     "start": "serve . -l 3000",
     "dev": "serve . -l 3000",
     "test": "node --test tests/**/*.test.js",
-    "test:e2e": "playwright test",
+    "validate:ui": "node scripts/validate-ui-contract.mjs",
     "build": "node scripts/build-release.mjs",
     "validate:release": "node scripts/validate-release.mjs",
-    "check": "npm test && npm run build && npm run validate:release"
+    "check": "npm test && npm run validate:ui && npm run build && npm run validate:release"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
     "serve": "^14.0.0"
   },
   "engines": {
