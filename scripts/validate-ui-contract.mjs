@@ -13,6 +13,8 @@ for (const id of ['app','hud','gameView','scene','sceneContent','actionBar','btn
 assert.equal((html.match(/role="dialog"/g) ?? []).length, 4, 'start, dialog, inventory, and journal surfaces must remain dialogs');
 assert.match(html, /id="journalStatus"[^>]*aria-live="polite"/, 'journal feedback must remain an accessible live region');
 assert.match(html, /type="module" src="\.\/src\/main\.js"/, 'visitor runtime must remain ES-module based');
+assert.match(html, /SIX-CHAPTER CAMPAIGN/, 'start screen must present the current full campaign');
+assert.doesNotMatch(html, /VERTICAL SLICE/i, 'player-facing vertical-slice wording must not return');
 
 assert.match(styles, /#actionBar button[\s\S]*min-height:\s*44px/, 'primary mobile actions must retain 44px minimum targets');
 assert.match(styles, /#actionBar button[\s\S]*min-width:\s*48px/, 'default action buttons must remain comfortably tappable');
@@ -20,6 +22,8 @@ assert.match(styles, /@media \(max-width:\s*640px\)/, 'compact mobile layout mus
 assert.match(styles, /@media \(max-width:\s*400px\)[\s\S]*min-height:\s*44px[\s\S]*min-width:\s*44px/, 'small-phone actions must retain 44px targets');
 assert.match(styles, /env\(safe-area-inset-bottom\)/, 'bottom action bar must respect device safe areas');
 assert.match(styles, /@media \(prefers-reduced-motion:\s*reduce\)/, 'CSS must retain reduced-motion handling');
+assert.match(styles, /\.env-step \{ width: 44px; height: 44px; \}/, 'compact environment step controls must retain 44px targets');
+assert.match(styles, /@media \(forced-colors: active\)/, 'CSS must retain forced-colors support');
 assert.match(styles, /#sceneContent[\s\S]*overflow-y:\s*auto/, 'scene content must stay vertically scrollable on compact screens');
 
 assert.match(main, /window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches/, 'particle renderer must honor reduced motion');
