@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "repository": "dtfgenetics/Thc-rpg",
+  "controlRepository": "dtfgenetics/Thc",
+  "defaultBranch": "main",
+  "canonicalDomains": [
+    "THC RPG game",
+    "THC RPG campaign",
+    "THC RPG browser runtime and save contract"
+  ],
+  "sourceRoots": [
+    "src/",
+    "tests/",
+    "scripts/",
+    "public/",
+    "docs/",
+    "package.json",
+    "AGENTS.md",
+    "README.md"
+  ],
+  "protectedPaths": [
+    ".github/workflows/**",
+    ".env*",
+    "public/game-release.json"
+  ],
+  "verificationProfiles": {
+    "default": {
+      "commands": [
+        "npm run check"
+      ],
+      "ciAuthoritative": true
+    },
+    "gameplay": {
+      "commands": [
+        "npm test"
+      ],
+      "ciAuthoritative": true
+    },
+    "release": {
+      "commands": [
+        "npm test",
+        "npm run validate:ui",
+        "npm run build",
+        "npm run validate:release"
+      ],
+      "ciAuthoritative": true
+    }
+  },
+  "production": {
+    "directMutation": false,
+    "integrationOwner": "dtfgenetics/Thc",
+    "route": "/games/thc-rpg/",
+    "notes": "Consume the exact green production artifact or rebuild the exact verified revision; never hand-copy an unverified source snapshot."
+  }
+}
