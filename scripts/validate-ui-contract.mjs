@@ -35,8 +35,8 @@ assert.match(main, /!game \|\| gameplayOverlayOpen \|\| event\.target instanceof
 for (const shortcut of ["case 'e'", "case 'p'", "case 'w'", "case 'h'", "case 'i'", "case 's'"]) {
   assert.ok(main.includes(shortcut), `missing keyboard shortcut ${shortcut}`);
 }
-assert.match(main, /localStorage\.setItem\(SAVE_KEY, JSON\.stringify\(game\.save\(\)\)\)/, 'manual save path must remain wired');
-assert.match(main, /localStorage\.getItem\(SAVE_KEY\)/, 'load path must remain wired');
+assert.match(main, /browserStorage\.setItem\(SAVE_KEY, JSON\.stringify\(game\.save\(\)\)\)/, 'manual save path must remain wired');
+assert.match(main, /browserStorage\.getItem\(SAVE_KEY\)/, 'load path must remain wired');
 assert.match(main, /showDialog\(/, 'dialog-driven progression surface must remain wired');
 
 assert.equal(release.route, '/games/thc-rpg/');

@@ -1,8 +1,9 @@
+import { browserStorage } from './game/BrowserStorage.js';
 import { Game } from './game/Game.js';
 import { SaveStore } from './game/SaveStore.js';
 
 const AUTOSAVE_INTERVAL_MS = 30_000;
-const saves = new SaveStore(localStorage);
+const saves = new SaveStore(browserStorage);
 
 function persistCurrentGame() {
     const current = Game.current;
