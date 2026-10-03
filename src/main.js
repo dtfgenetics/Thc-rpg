@@ -1,3 +1,4 @@
+import { browserStorage } from './game/BrowserStorage.js';
 import { Game } from './game/Game.js';
 
 const SAVE_KEY = 'thc-rpg-save';
@@ -189,7 +190,7 @@ function startUpdateLoop() {
 
 function startNewGame() {
     const name = refs.nameInput.value.trim() || 'Green Thumb';
-    localStorage.removeItem(SAVE_KEY);
+    browserStorage.removeItem(SAVE_KEY);
     game = new Game(name, gameData);
     refs.startModal.style.display = 'none';
     ensureParticles();
@@ -202,7 +203,7 @@ function startNewGame() {
 }
 
 function loadGame() {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = browserStorage.getItem(SAVE_KEY);
     if (!raw) {
         showDialog('❌ No Save', 'No saved game was found in this browser.');
         return;
@@ -226,12 +227,12 @@ function loadGame() {
 function saveGame() {
     if (!game) return;
     try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(game.save()));
+        browserStorage.setItem(SAVE_KEY, JSON.stringify(game.save()));
         Audio.play('click');
         showDialog('💾 Saved!', 'Game saved successfully.');
     } catch (error) {
         console.error('Failed to save:', error);
-        showDialog('❌ Save Error', 'The browser could not save the game.');
+        showDialog('❌ Save Error', 'The browser could not save the game. Progress remains in this tab only; allow site storage before leaving or reloading.');
     }
 }
 
@@ -959,7 +960,7 @@ async function bootstrap() {
         setLoading(15, 'Loading cultivation data...');
         gameData = await loadGameData();
         setLoading(65, 'Preparing grow room...');
-        refs.loadBtn.disabled = !localStorage.getItem(SAVE_KEY);
+        refs.loadBtn.disabled = !browserStorage.getItem(SAVE_KEY);
         refs.app.style.display = 'flex';
         refs.startModal.style.display = 'flex';
         setLoading(100, 'Ready to grow! 🌱');
