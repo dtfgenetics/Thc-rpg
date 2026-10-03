@@ -1,3 +1,4 @@
+import { browserStorage } from './game/BrowserStorage.js';
 import { Game } from './game/Game.js';
 import { SaveStore } from './game/SaveStore.js';
 import {
@@ -7,7 +8,7 @@ import {
     plantKeeperCutting
 } from './game/KeeperCuttings.js';
 
-const saves = new SaveStore(localStorage);
+const saves = new SaveStore(browserStorage);
 const openButton = document.getElementById('btnJournal');
 const modal = document.getElementById('journalModal');
 const list = document.getElementById('journalList');
